@@ -12,6 +12,11 @@
   html, body { margin:0; padding:0; height:100%; width:100%; }
   #map { height:100vh; width:100vw; }
   .leaflet-container { background:#000; }
+  .port-label {
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px #000;
+  }
 </style>
 </head>
 <body>
@@ -40,10 +45,17 @@ function invertY(y){ return IMG_HEIGHT - y; }
    PORT ICON
 ========================= */
 function createPortIcon(selected=false){
-  return L.icon({ 
-    iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
-    iconSize: selected?[48,48]:[42,42],
-    iconAnchor:[24,24]
+  return L.divIcon({ 
+    html: `
+      <div style="
+        width:${selected?52:42}px;
+        height:${selected?52:42}px;
+        border:${selected?'3px solid #00bcd4':'none'};
+        border-radius:50%;
+        background:url('https://i.postimg.cc/wMs4zThh/anchor.png') center/contain no-repeat;">
+      </div>
+    `,
+    className: ''
   });
 }
 
@@ -64,31 +76,31 @@ const routes=[
     from:'Miami',
     to:'London',
     coords:[
-      [invertY(171), 273],  // Miami
-      [invertY(102), 503]   // London
+      [invertY(171), 273],
+      [invertY(102), 503]
     ]
   },
-  {
+   {
     from:'Miami',
     to:'Konigsberg',
     coords:[
-      [invertY(171), 273],  // Miami
-      [invertY(102), 503],  // London
+      [invertY(171), 273],
+      [invertY(102), 503],
       [invertY(93), 520],
       [invertY(84), 528],
       [invertY(93), 538],
-      [invertY(97), 560]    // Konigsberg
+      [invertY(97), 560]
     ]
   },
   {
     from:'London',
     to:'Konigsberg',
     coords:[
-      [invertY(102), 503],  // London
+      [invertY(102), 503],
       [invertY(93), 520],
       [invertY(84), 528],
       [invertY(93), 538],
-      [invertY(97), 560]    // Konigsberg
+      [invertY(97), 560]
     ]
   }
 ];
@@ -100,28 +112,57 @@ const portMarkers={};
 let selectedPorts=[];
 let routeLine=null;
 
-// Add markers for ports
+// Add markers and labels for ports
 ports.forEach(port=>{
-  const marker=L.marker(port.coords,{icon:createPortIcon(false), title:port.name}).addTo(map);
-  portMarkers[port.name]=marker;
-  marker.on('click',()=>handlePortClick(port));
+  const marker = L.marker(port.coords, {icon:createPortIcon(false), title:port.name}).addTo(map);
+  const label = L.marker(port.coords, {
+    icon: L.divIcon({className:'port-label', html:port.name, iconAnchor:[0,-25]})
+  }).addTo(map);
+
+  portMarkers[port.name] = marker;
+
+  marker.on('click', ()=>handlePortClick(port));
 });
 
+// Update icons visually
 function updatePortIcons(){
   ports.forEach(port=>{
-    const selected=selectedPorts.some(p=>p.name===port.name);
+    const selected = selectedPorts.some(p=>p.name === port.name);
     portMarkers[port.name].setIcon(createPortIcon(selected));
   });
 }
 
+// Handle port click
 function handlePortClick(port){
+  // If already selected, do nothing
   if(selectedPorts.some(p=>p.name===port.name)) return;
+
+  // Add port, max 2 ports
   selectedPorts.push(port);
-  if(selectedPorts.length>2) selectedPorts.shift(); // only keep last 2 clicks
+  if(selectedPorts.length>2) selectedPorts.shift();
   updatePortIcons();
   updateRoute();
 }
 
+// Deselect all ports by clicking on map (anywhere else)
+map.on('click', (e)=>{
+  // If clicked somewhere without a port, clear selection
+  const clickedOnPort = ports.some(p=>{
+    const dx = e.latlng.lat - p.coords[0];
+    const dy = e.latlng.lng - p.coords[1];
+    return Math.sqrt(dx*dx + dy*dy) < 5; // 5 pixels tolerance
+  });
+
+  if(!clickedOnPort){
+    selectedPorts = [];
+    updatePortIcons();
+    if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+    // Send empty selection to parent
+    window.parent.postMessage({ startPort:null, endPort:null, portsAlongRoute:[] }, '*');
+  }
+});
+
+// Update route polyline
 function updateRoute(){
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
   if(selectedPorts.length<2) return;
@@ -129,39 +170,24 @@ function updateRoute(){
   const start = selectedPorts[0].name;
   const end = selectedPorts[1].name;
 
-  // Find pre-defined route (both directions)
-  const route = routes.find(r =>
-    (r.from === start && r.to === end) || (r.from === end && r.to === start)
-  );
+  const route = routes.find(r => (r.from===start && r.to===end) || (r.from===end && r.to===start));
+  if(!route) return;
 
-  if(!route) return; // No route defined
-
-  routeLine = L.polyline(route.coords,{color:'#00bcd4', weight:4, opacity:0.9}).addTo(map);
+  routeLine = L.polyline(route.coords, {color:'#00bcd4', weight:4, opacity:0.9}).addTo(map);
   map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
 
-  // -------------------------
-  // Build list of ports along the route
-  // -------------------------
-  let portsAlongRoute = [start];
-
-  ports.forEach(p => {
-    if(p.name !== start && p.name !== end){
-      // If port coords are on the route coords, include as intermediate
-      const match = route.coords.some(c => c[0] === p.coords[0] && c[1] === p.coords[1]);
+  // Build ports along the route
+  let portsAlongRoute = [];
+  portsAlongRoute.push(start);
+  ports.forEach(p=>{
+    if(p.name!==start && p.name!==end){
+      const match = route.coords.some(c => c[0]===p.coords[0] && c[1]===p.coords[1]);
       if(match) portsAlongRoute.push(p.name);
     }
   });
-
   portsAlongRoute.push(end);
 
-  // -------------------------
-  // Send route info to parent iframe
-  // -------------------------
-  window.parent.postMessage({
-    startPort: start,
-    endPort: end,
-    portsAlongRoute: portsAlongRoute
-  }, '*');
+  window.parent.postMessage({startPort:start, endPort:end, portsAlongRoute}, '*');
 }
 </script>
 </body>
