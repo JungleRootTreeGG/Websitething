@@ -6,7 +6,7 @@
 
   <link
     rel="stylesheet"
-    href="https://unpkg.com"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     crossorigin=""
   />
 
@@ -36,7 +36,7 @@
 <div id="map"></div>
 
 <script
-  src="https://unpkg.com"
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
   crossorigin=""
 ></script>
 
@@ -55,7 +55,7 @@
     maxZoom: 2
   });
 
-  const bounds = [, [IMG_HEIGHT, IMG_WIDTH]];
+  const bounds = [[0, 0], [IMG_HEIGHT, IMG_WIDTH]];
   L.imageOverlay(IMG_URL, bounds).addTo(map);
   map.fitBounds(bounds);
 
@@ -72,8 +72,8 @@
   function createPortIcon(selected) {
     return L.icon({
       iconUrl: './assets/anchor.png',
-      iconSize: selected ? : :,
-      iconAnchor:
+      iconSize: selected ? [48, 48] : [42, 42],
+      iconAnchor: [24, 24]
     });
   }
 
@@ -135,8 +135,8 @@
   });
 
   function distance(a, b) {
-    const dx = a - b;
-    const dy = a - b;
+    const dx = a[0] - b[0];
+    const dy = a[1] - b[1];
     return Math.sqrt(dx * dx + dy * dy);
   }
 
@@ -249,8 +249,8 @@
 
     if (selectedPorts.length < 2) return;
 
-    const start = selectedPorts;
-    const end = selectedPorts;
+    const start = selectedPorts[0];
+    const end = selectedPorts[1];
 
     const seaPath = findSeaRoute(
       findNearestSeaNode(start.coords),
@@ -267,7 +267,7 @@
       opacity: 0.9
     }).addTo(map);
 
-    map.fitBounds(routeLine.getBounds(), { padding: });
+    map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
   }
 </script>
 
