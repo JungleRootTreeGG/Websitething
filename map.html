@@ -13,7 +13,7 @@
   .port-label {
     color: #fff;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 12px; /* smaller than before */
     text-shadow: 1px 1px 2px #000;
     pointer-events: none; /* clicks pass through to anchor */
   }
@@ -47,8 +47,8 @@ function invertY(y){ return IMG_HEIGHT - y; }
 function createPortIcon(selected=false){
   return L.icon({ 
     iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
-    iconSize: selected?[48,48]:[42,42],
-    iconAnchor:[24,24]
+    iconSize: selected?[36,36]:[32,32], // smaller icons
+    iconAnchor:[16,16] // adjusted anchor for smaller icon
   });
 }
 
@@ -87,7 +87,7 @@ ports.forEach(port=>{
     icon: L.divIcon({
       className: 'port-label',
       html: port.name,
-      iconAnchor: [0,-25] // position above anchor
+      iconAnchor: [-10,-16] // move a bit left and slightly above anchor
     })
   }).addTo(map);
 
