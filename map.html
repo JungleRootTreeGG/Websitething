@@ -5,17 +5,21 @@
 <title>Earth Shipping Routes - Manual Routes</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <style>
-  html, body { margin:0; padding:0; height:100%; width:100%; }
-  #map { height:100vh; width:100vw; }
+  html, body { margin:0; padding:0; }
+  #map {
+    width: 1005px;  /* exact map image width */
+    height: 500px;  /* exact map image height */
+    margin: 0 auto; /* center horizontally if needed */
+  }
   .leaflet-container { background:#000; }
 
   /* port label styling */
   .port-label {
     color: #fff;
     font-weight: bold;
-    font-size: 12px; /* smaller than before */
+    font-size: 12px;
     text-shadow: 1px 1px 2px #000;
-    pointer-events: none; /* clicks pass through to anchor */
+    pointer-events: none;
   }
 </style>
 </head>
@@ -24,77 +28,56 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-/* =========================
-   MAP CONFIGURATION
-========================= */
 const IMG_URL = 'https://i.postimg.cc/YSDwq0ms/map.webp';
 const IMG_WIDTH = 1005;
 const IMG_HEIGHT = 500;
 
-const map = L.map('map',{crs:L.CRS.Simple, minZoom:0, maxZoom:3});
-const bounds=[[0,0],[IMG_HEIGHT,IMG_WIDTH]];
+const map = L.map('map', {crs:L.CRS.Simple, minZoom:0, maxZoom:3});
+const bounds = [[0,0],[IMG_HEIGHT,IMG_WIDTH]];
 L.imageOverlay(IMG_URL, bounds).addTo(map);
 map.fitBounds(bounds);
 
-/* =========================
-   HELPER TO INVERT Y
-========================= */
 function invertY(y){ return IMG_HEIGHT - y; }
 
-/* =========================
-   PORT ICON
-========================= */
 function createPortIcon(selected=false){
-  return L.icon({ 
+  return L.icon({
     iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
-    iconSize: selected?[36,36]:[32,32], // smaller icons
-    iconAnchor:[16,16] // adjusted anchor for smaller icon
+    iconSize: selected?[36,36]:[32,32],
+    iconAnchor:[16,16]
   });
 }
 
-/* =========================
-   PORT DATA
-========================= */
 const ports=[
   { name:'Miami', coords:[invertY(171), 273] },
   { name:'London', coords:[invertY(102), 503] },
   { name:'Konigsberg', coords:[invertY(97), 560] }
 ];
 
-/* =========================
-   PRE-DEFINED ROUTES
-========================= */
 const routes=[
   { from:'Miami', to:'London', coords:[[invertY(171),273],[invertY(102),503]] },
   { from:'Miami', to:'Konigsberg', coords:[[invertY(171),273],[invertY(102),503],[invertY(93),520],[invertY(84),528],[invertY(93),538],[invertY(97),560]] },
   { from:'London', to:'Konigsberg', coords:[[invertY(102),503],[invertY(93),520],[invertY(84),528],[invertY(93),538],[invertY(97),560]] }
 ];
 
-/* =========================
-   PORT INTERACTION
-========================= */
 const portMarkers={};
 let selectedPorts=[];
 let routeLine=null;
 
-// Add markers and separate labels
 ports.forEach(port=>{
   const marker = L.marker(port.coords, {icon:createPortIcon(false), title:port.name}).addTo(map);
   portMarkers[port.name] = marker;
 
-  // separate label above anchor
   L.marker(port.coords, {
     icon: L.divIcon({
       className: 'port-label',
       html: port.name,
-      iconAnchor: [-10,-16] // move a bit left and slightly above anchor
+      iconAnchor: [-10,-16]
     })
   }).addTo(map);
 
   marker.on('click', ()=>handlePortClick(port));
 });
 
-// Update icons visually
 function updatePortIcons(){
   ports.forEach(port=>{
     const selected = selectedPorts.some(p=>p.name===port.name);
@@ -102,21 +85,19 @@ function updatePortIcons(){
   });
 }
 
-// Handle port click
 function handlePortClick(port){
   if(selectedPorts.some(p=>p.name===port.name)) return;
   selectedPorts.push(port);
-  if(selectedPorts.length>2) selectedPorts.shift(); // keep last 2 clicks
+  if(selectedPorts.length>2) selectedPorts.shift();
   updatePortIcons();
   updateRoute();
 }
 
-// Deselect all ports by clicking empty map
 map.on('click', e=>{
   const clickedOnPort = ports.some(p=>{
     const dx = e.latlng.lat - p.coords[0];
     const dy = e.latlng.lng - p.coords[1];
-    return Math.sqrt(dx*dx + dy*dy)<5; // 5px tolerance
+    return Math.sqrt(dx*dx + dy*dy)<5;
   });
   if(!clickedOnPort){
     selectedPorts=[];
@@ -126,7 +107,6 @@ map.on('click', e=>{
   }
 });
 
-// Update route polyline
 function updateRoute(){
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
   if(selectedPorts.length<2) return;
