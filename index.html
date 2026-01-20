@@ -7,7 +7,6 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
 
@@ -27,271 +26,250 @@
       width: 100vw;
     }
 
-    .port-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 42px;
-      height: 42px;
-      font-size: 26px;
-      border-radius: 50%;
-      background: #ffffff;
-      color: #001b2e;
-      box-shadow: 0 0 0 3px #001b2e;
-    }
-
-    .port-icon.selected {
-      box-shadow: 0 0 0 4px #00bcd4;
-      background: #e6faff;
-    }
-
     .leaflet-container {
       background: #000;
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
 
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+<div id="map"></div>
 
-  <script>
-    // Public NASA Earth image (equirectangular)
-    const IMG_URL = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74497/world.topo.bathy.200412.3x5400x2700.jpg';
-    const IMG_WIDTH = 5400;
-    const IMG_HEIGHT = 2700;
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  crossorigin=""
+></script>
 
-    // Leaflet map with simple pixel CRS
-    const map = L.map('map', {
-      crs: L.CRS.Simple,
-      minZoom: -2,
-      maxZoom: 2
+<script>
+  /* =========================
+     MAP IMAGE CONFIGURATION
+     ========================= */
+
+  const IMG_URL = './assets/world.png';
+  const IMG_WIDTH = 1005;
+  const IMG_HEIGHT = 500;
+
+  const map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: -2,
+    maxZoom: 2
+  });
+
+  const bounds = [[0, 0], [IMG_HEIGHT, IMG_WIDTH]];
+  L.imageOverlay(IMG_URL, bounds).addTo(map);
+  map.fitBounds(bounds);
+
+  function latLonToPoint(lat, lon) {
+    const x = (lon + 180) / 360 * IMG_WIDTH;
+    const y = (90 - lat) / 180 * IMG_HEIGHT;
+    return [y, x];
+  }
+
+  /* =========================
+     PORT ICON (PNG, TRANSPARENT)
+     ========================= */
+
+  function createPortIcon(selected) {
+    return L.icon({
+      iconUrl: './assets/anchor.png',
+      iconSize: selected ? [48, 48] : [42, 42],
+      iconAnchor: [24, 24]
     });
+  }
 
-    const bounds = [[0, 0], [IMG_HEIGHT, IMG_WIDTH]];
-    L.imageOverlay(IMG_URL, bounds).addTo(map);
-    map.fitBounds(bounds);
+  /* =========================
+     PORT DATA
+     ========================= */
 
-    // Convert lat/lon to image pixel coordinates (equirectangular)
-    function latLonToPoint(lat, lon) {
-      const x = (lon + 180) / 360 * IMG_WIDTH;
-      const y = (90 - lat) / 180 * IMG_HEIGHT;
-      return [y, x]; // [lat-like, lon-like] for CRS.Simple
-    }
+  const ports = [
+    { name: 'Amsterdam',   lat: 52.3791, lon: 4.9003 },
+    { name: 'Rotterdam',   lat: 51.9244, lon: 4.4777 },
+    { name: 'London',      lat: 51.5074, lon: -0.1278 },
+    { name: 'New York',    lat: 40.7128, lon: -74.0060 },
+    { name: 'Los Angeles', lat: 33.7405, lon: -118.2775 },
+    { name: 'Kaliningrad', lat: 54.7104, lon: 20.4522 },
+    { name: 'Hamburg',     lat: 53.5461, lon: 9.9661 },
+    { name: 'Singapore',   lat: 1.3521,  lon: 103.8198 },
+    { name: 'Shanghai',    lat: 31.2304, lon: 121.4737 },
+    { name: 'Dubai',       lat: 25.2769, lon: 55.2962 }
+  ];
 
-    function createPortIcon(selected) {
-      return L.divIcon({
-        className: selected ? 'port-icon selected' : 'port-icon',
-        html: '⚓',
-        iconSize: [42, 42],
-        iconAnchor: [21, 21]
-      });
-    }
+  ports.forEach(p => {
+    p.coords = latLonToPoint(p.lat, p.lon);
+  });
 
-    // Ports at real-world locations
-    const ports = [
-      { name: 'Amsterdam',   lat: 52.3791, lon: 4.9003 },
-      { name: 'Rotterdam',   lat: 51.9244, lon: 4.4777 },
-      { name: 'London',      lat: 51.5074, lon: -0.1278 },
-      { name: 'New York',    lat: 40.7128, lon: -74.0060 },
-      { name: 'Los Angeles', lat: 33.7405, lon: -118.2775 },
-      { name: 'Kaliningrad', lat: 54.7104, lon: 20.4522 },
-      { name: 'Hamburg',     lat: 53.5461, lon: 9.9661 },
-      { name: 'Singapore',   lat: 1.3521,  lon: 103.8198 },
-      { name: 'Shanghai',    lat: 31.2304, lon: 121.4737 },
-      { name: 'Dubai',       lat: 25.2769, lon: 55.2962 }
-    ];
+  /* =========================
+     SEA NODE GRAPH
+     ========================= */
 
-    // Precompute pixel coords
-    ports.forEach(p => {
-      p.coords = latLonToPoint(p.lat, p.lon);
+  const seaNodes = [
+    { id: 'NA1', lat: 55, lon: -20, neighbors: ['NA2', 'NA3'] },
+    { id: 'NA2', lat: 50, lon: -40, neighbors: ['NA1', 'NA4'] },
+    { id: 'NA3', lat: 50, lon: 0,   neighbors: ['NA1', 'EU1'] },
+    { id: 'NA4', lat: 40, lon: -50, neighbors: ['NA2', 'NA5', 'SA1'] },
+    { id: 'NA5', lat: 30, lon: -60, neighbors: ['NA4', 'CA1'] },
+
+    { id: 'EU1', lat: 45, lon: 10,  neighbors: ['NA3', 'MED1'] },
+    { id: 'MED1',lat: 35, lon: 20,  neighbors: ['EU1', 'SUEZ'] },
+    { id: 'SUEZ',lat: 30, lon: 32,  neighbors: ['MED1', 'IO1'] },
+
+    { id: 'IO1', lat: 10, lon: 60,  neighbors: ['SUEZ', 'IO2', 'SEA1'] },
+    { id: 'IO2', lat: -10,lon: 70,  neighbors: ['IO1', 'AUS1'] },
+
+    { id: 'SEA1',lat: 5,  lon: 100, neighbors: ['IO1', 'SEA2'] },
+    { id: 'SEA2',lat: 10, lon: 120, neighbors: ['SEA1', 'PAC1'] },
+    { id: 'PAC1',lat: 20, lon: 150, neighbors: ['SEA2', 'PAC2'] },
+    { id: 'PAC2',lat: 30, lon: -150,neighbors: ['PAC1', 'NA5'] },
+
+    { id: 'SA1', lat: 0,  lon: -40, neighbors: ['NA4', 'SA2'] },
+    { id: 'SA2', lat: -30,lon: -30, neighbors: ['SA1', 'AF1'] },
+    { id: 'AF1', lat: -30,lon: 10,  neighbors: ['SA2', 'IO2'] },
+
+    { id: 'AUS1',lat: -20,lon: 120, neighbors: ['IO2', 'PAC1'] }
+  ];
+
+  const seaNodeById = {};
+  seaNodes.forEach(n => {
+    n.coords = latLonToPoint(n.lat, n.lon);
+    seaNodeById[n.id] = n;
+  });
+
+  function distance(a, b) {
+    const dx = a[0] - b[0];
+    const dy = a[1] - b[1];
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function findNearestSeaNode(coord) {
+    let best = null;
+    let bestDist = Infinity;
+    seaNodes.forEach(node => {
+      const d = distance(coord, node.coords);
+      if (d < bestDist) {
+        bestDist = d;
+        best = node;
+      }
     });
+    return best;
+  }
 
-    // Simple ocean waypoint network (very rough, but avoids straight land cuts)
-    const seaNodes = [
-      // North Atlantic / Europe
-      { id: 'NA1', lat: 55, lon: -20, neighbors: ['NA2', 'NA3'] },
-      { id: 'NA2', lat: 50, lon: -40, neighbors: ['NA1', 'NA4'] },
-      { id: 'NA3', lat: 50, lon: 0,   neighbors: ['NA1', 'EU1'] },
-      { id: 'NA4', lat: 40, lon: -50, neighbors: ['NA2', 'NA5', 'SA1'] },
-      { id: 'NA5', lat: 30, lon: -60, neighbors: ['NA4', 'CA1'] },
+  function findSeaRoute(startNode, endNode) {
+    const openSet = new Set([startNode.id]);
+    const cameFrom = {};
+    const gScore = {};
+    const fScore = {};
 
-      // Europe / Med / Suez
-      { id: 'EU1', lat: 45, lon: 10,  neighbors: ['NA3', 'MED1'] },
-      { id: 'MED1',lat: 35, lon: 20,  neighbors: ['EU1', 'SUEZ'] },
-      { id: 'SUEZ',lat: 30, lon: 32,  neighbors: ['MED1', 'IO1'] },
-
-      // Indian Ocean
-      { id: 'IO1', lat: 10, lon: 60,  neighbors: ['SUEZ', 'IO2', 'SEA1'] },
-      { id: 'IO2', lat: -10,lon: 70,  neighbors: ['IO1', 'AUS1'] },
-
-      // SE Asia / Pacific
-      { id: 'SEA1',lat: 5,  lon: 100, neighbors: ['IO1', 'SEA2'] },
-      { id: 'SEA2',lat: 10, lon: 120, neighbors: ['SEA1', 'PAC1'] },
-      { id: 'PAC1',lat: 20, lon: 150, neighbors: ['SEA2', 'PAC2'] },
-      { id: 'PAC2',lat: 30, lon: -150,neighbors: ['PAC1', 'NA5'] },
-
-      // South America / Africa
-      { id: 'SA1', lat: 0,  lon: -40, neighbors: ['NA4', 'SA2'] },
-      { id: 'SA2', lat: -30,lon: -30, neighbors: ['SA1', 'AF1'] },
-      { id: 'AF1', lat: -30,lon: 10,  neighbors: ['SA2', 'IO2'] },
-
-      // Australia region
-      { id: 'AUS1',lat: -20,lon: 120, neighbors: ['IO2', 'PAC1'] }
-    ];
-
-    const seaNodeById = {};
     seaNodes.forEach(n => {
-      n.coords = latLonToPoint(n.lat, n.lon);
-      seaNodeById[n.id] = n;
+      gScore[n.id] = Infinity;
+      fScore[n.id] = Infinity;
     });
 
-    function distance(a, b) {
-      const dx = a[0] - b[0];
-      const dy = a[1] - b[1];
-      return Math.sqrt(dx * dx + dy * dy);
-    }
+    gScore[startNode.id] = 0;
+    fScore[startNode.id] = distance(startNode.coords, endNode.coords);
 
-    function findNearestSeaNode(coord) {
+    function lowestF() {
       let best = null;
-      let bestDist = Infinity;
-      seaNodes.forEach(node => {
-        const d = distance(coord, node.coords);
-        if (d < bestDist) {
-          bestDist = d;
-          best = node;
+      let bestVal = Infinity;
+      openSet.forEach(id => {
+        if (fScore[id] < bestVal) {
+          bestVal = fScore[id];
+          best = id;
         }
       });
       return best;
     }
 
-    // A* on seaNodes
-    function findSeaRoute(startNode, endNode) {
-      const openSet = new Set([startNode.id]);
-      const cameFrom = {};
-      const gScore = {};
-      const fScore = {};
-
-      seaNodes.forEach(node => {
-        gScore[node.id] = Infinity;
-        fScore[node.id] = Infinity;
-      });
-
-      gScore[startNode.id] = 0;
-      fScore[startNode.id] = distance(startNode.coords, endNode.coords);
-
-      function lowestF() {
-        let best = null;
-        let bestVal = Infinity;
-        openSet.forEach(id => {
-          if (fScore[id] < bestVal) {
-            bestVal = fScore[id];
-            best = id;
-          }
-        });
-        return best;
-      }
-
-      while (openSet.size > 0) {
-        const currentId = lowestF();
-        if (!currentId) break;
-        if (currentId === endNode.id) {
-          const path = [];
-          let cur = currentId;
-          while (cur) {
-            path.unshift(seaNodeById[cur]);
-            cur = cameFrom[cur];
-          }
-          return path;
+    while (openSet.size) {
+      const currentId = lowestF();
+      if (currentId === endNode.id) {
+        const path = [];
+        let cur = currentId;
+        while (cur) {
+          path.unshift(seaNodeById[cur]);
+          cur = cameFrom[cur];
         }
-
-        openSet.delete(currentId);
-        const current = seaNodeById[currentId];
-
-        current.neighbors.forEach(nid => {
-          const neighbor = seaNodeById[nid];
-          const tentativeG = gScore[currentId] + distance(current.coords, neighbor.coords);
-          if (tentativeG < gScore[nid]) {
-            cameFrom[nid] = currentId;
-            gScore[nid] = tentativeG;
-            fScore[nid] = tentativeG + distance(neighbor.coords, endNode.coords);
-            if (!openSet.has(nid)) openSet.add(nid);
-          }
-        });
+        return path;
       }
 
-      return null;
-    }
+      openSet.delete(currentId);
+      const current = seaNodeById[currentId];
 
-    // Port markers and selection
-    const portMarkers = {};
-    let selectedPorts = [];
-    let routeLine = null;
-
-    ports.forEach(port => {
-      const marker = L.marker(port.coords, {
-        icon: createPortIcon(false),
-        title: port.name
-      }).addTo(map);
-
-      portMarkers[port.name] = marker;
-
-      marker.on('click', () => handlePortClick(port));
-    });
-
-    function updatePortIcons() {
-      ports.forEach(port => {
-        const isSelected = selectedPorts.some(p => p.name === port.name);
-        portMarkers[port.name].setIcon(createPortIcon(isSelected));
+      current.neighbors.forEach(nid => {
+        const neighbor = seaNodeById[nid];
+        const tentative = gScore[currentId] + distance(current.coords, neighbor.coords);
+        if (tentative < gScore[nid]) {
+          cameFrom[nid] = currentId;
+          gScore[nid] = tentative;
+          fScore[nid] = tentative + distance(neighbor.coords, endNode.coords);
+          openSet.add(nid);
+        }
       });
     }
+    return null;
+  }
 
-    function handlePortClick(port) {
-      if (selectedPorts.some(p => p.name === port.name)) return;
+  /* =========================
+     PORT INTERACTION
+     ========================= */
 
-      selectedPorts.push(port);
-      if (selectedPorts.length > 2) {
-        selectedPorts.shift();
-      }
+  const portMarkers = {};
+  let selectedPorts = [];
+  let routeLine = null;
 
-      updatePortIcons();
-      updateRoute();
+  ports.forEach(port => {
+    const marker = L.marker(port.coords, {
+      icon: createPortIcon(false),
+      title: port.name
+    }).addTo(map);
+
+    portMarkers[port.name] = marker;
+    marker.on('click', () => handlePortClick(port));
+  });
+
+  function updatePortIcons() {
+    ports.forEach(port => {
+      const selected = selectedPorts.some(p => p.name === port.name);
+      portMarkers[port.name].setIcon(createPortIcon(selected));
+    });
+  }
+
+  function handlePortClick(port) {
+    if (selectedPorts.some(p => p.name === port.name)) return;
+    selectedPorts.push(port);
+    if (selectedPorts.length > 2) selectedPorts.shift();
+    updatePortIcons();
+    updateRoute();
+  }
+
+  function updateRoute() {
+    if (routeLine) {
+      map.removeLayer(routeLine);
+      routeLine = null;
     }
 
-    function updateRoute() {
-      if (routeLine) {
-        map.removeLayer(routeLine);
-        routeLine = null;
-      }
+    if (selectedPorts.length < 2) return;
 
-      if (selectedPorts.length < 2) return;
+    const start = selectedPorts[0];
+    const end = selectedPorts[1];
 
-      const startPort = selectedPorts[0];
-      const endPort = selectedPorts[1];
+    const seaPath = findSeaRoute(
+      findNearestSeaNode(start.coords),
+      findNearestSeaNode(end.coords)
+    );
 
-      const startNode = findNearestSeaNode(startPort.coords);
-      const endNode = findNearestSeaNode(endPort.coords);
+    if (!seaPath) return;
 
-      const seaPath = findSeaRoute(startNode, endNode);
-      if (!seaPath) return;
+    const coords = [start.coords, ...seaPath.map(n => n.coords), end.coords];
 
-      const coords = [];
-      coords.push(startPort.coords);
-      seaPath.forEach(node => coords.push(node.coords));
-      coords.push(endPort.coords);
+    routeLine = L.polyline(coords, {
+      color: '#00bcd4',
+      weight: 4,
+      opacity: 0.9
+    }).addTo(map);
 
-      routeLine = L.polyline(coords, {
-        color: '#00bcd4',
-        weight: 4,
-        opacity: 0.9
-      }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+  }
+</script>
 
-      map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
-    }
-  </script>
 </body>
 </html>
