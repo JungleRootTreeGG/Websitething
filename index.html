@@ -62,38 +62,83 @@
 <body>
 
 <!-- Map iframe -->
-<iframe src="map.html"></iframe>
+<iframe src="map.html" id="mapFrame"></iframe>
 
 <!-- Ordering section beneath the map -->
 <div class="order-section">
   <h2>Place Your Shipping Order</h2>
-  <form>
-    <label>
-      From Port:
-      <select>
-        <option>Miami</option>
-        <option>London</option>
-        <option>Konigsberg</option>
+  <form id="orderForm">
+    <label>From Port:
+      <input type="text" id="fromPort" readonly>
+    </label>
+
+    <label>To Port:
+      <input type="text" id="toPort" readonly>
+    </label>
+
+    <label>Discord Username:
+      <input type="text" id="discord">
+    </label>
+
+    <label>In-game Username:
+      <input type="text" id="ingame">
+    </label>
+
+    <label>Cargo Value ($):
+      <input type="number" id="cargoValue" min="0" value="0">
+    </label>
+
+    <label>Container Type:
+      <select id="containerType">
+        <option>Standard</option>
+        <option>Refrigerated</option>
+        <option>Hazardous</option>
       </select>
     </label>
 
-    <label>
-      To Port:
-      <select>
-        <option>Miami</option>
-        <option>London</option>
-        <option>Konigsberg</option>
-      </select>
+    <label>Container Number:
+      <input type="text" id="containerNumber">
     </label>
 
-    <label>
-      Cargo:
-      <input type="text" placeholder="Enter cargo details">
+    <label>Total Price ($):
+      <input type="text" id="totalPrice" readonly>
     </label>
 
     <button type="submit">Submit Order</button>
   </form>
 </div>
+
+<script>
+  const perStopFee = 1000;
+  let routePortNames = []; // list of ports along the selected route
+
+  // Listen for messages from the map iframe
+  window.addEventListener('message', (event) => {
+    // event.data should include { startPort, endPort, portsAlongRoute }
+    const data = event.data;
+    if(data && data.startPort && data.endPort && Array.isArray(data.portsAlongRoute)){
+      routePortNames = data.portsAlongRoute;
+      document.getElementById('fromPort').value = data.startPort;
+      document.getElementById('toPort').value = data.endPort;
+      calculatePrice();
+    }
+  });
+
+  function calculatePrice(){
+    const cargoValue = parseFloat(document.getElementById('cargoValue').value) || 0;
+    const stops = routePortNames.length || 0;
+    const totalPrice = stops*perStopFee + cargoValue*0.1;
+    document.getElementById('totalPrice').value = totalPrice.toFixed(2);
+  }
+
+  document.getElementById('cargoValue').addEventListener('input', calculatePrice);
+
+  // Optional: handle form submission
+  document.getElementById('orderForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    alert(`Order submitted!\nFrom: ${document.getElementById('fromPort').value}\nTo: ${document.getElementById('toPort').value}\nTotal Price: $${document.getElementById('totalPrice').value}`);
+  });
+</script>
 
 </body>
 </html>
