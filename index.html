@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Earth Shipping Routes (Pixel-based)</title>
+  <title>Earth Shipping Routes (Pixel-based, Fixed Y)</title>
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -54,6 +54,13 @@ L.imageOverlay(IMG_URL, bounds).addTo(map);
 map.fitBounds(bounds);
 
 /* =========================
+   HELPER TO INVERT Y
+   ========================= */
+function invertY(y) {
+  return IMG_HEIGHT - y;
+}
+
+/* =========================
    PORT ICON
    ========================= */
 function createPortIcon(selected = false) {
@@ -65,23 +72,23 @@ function createPortIcon(selected = false) {
 }
 
 /* =========================
-   PORT DATA (PIXEL COORDINATES)
+   PORT DATA (PIXEL COORDINATES, FIXED Y)
    ========================= */
 const ports = [
-  { name: 'London', coords: [102, 503] },       // [y, x]
-  { name: 'Konigsberg', coords: [97, 560] },
-  { name: 'Miami', coords: [171, 273] }
+  { name: 'London',      coords: [invertY(102), 503] },
+  { name: 'Konigsberg',  coords: [invertY(97), 560] },
+  { name: 'Miami',       coords: [invertY(171), 273] }
 ];
 
 /* =========================
    SEA NODE GRAPH (PIXEL BASED)
    ========================= */
 const seaNodes = [
-  { id: 'NA1', coords: [50, 100], neighbors: ['NA2', 'NA3'] },
-  { id: 'NA2', coords: [70, 200], neighbors: ['NA1', 'NA4'] },
-  { id: 'NA3', coords: [100, 300], neighbors: ['NA1'] },
-  { id: 'NA4', coords: [150, 250], neighbors: ['NA2'] },
-  // Add additional nodes as needed for route calculations
+  { id: 'NA1', coords: [invertY(50), 100], neighbors: ['NA2', 'NA3'] },
+  { id: 'NA2', coords: [invertY(70), 200], neighbors: ['NA1', 'NA4'] },
+  { id: 'NA3', coords: [invertY(100), 300], neighbors: ['NA1'] },
+  { id: 'NA4', coords: [invertY(150), 250], neighbors: ['NA2'] },
+  // Add additional nodes as needed for more routes
 ];
 
 const seaNodeById = {};
