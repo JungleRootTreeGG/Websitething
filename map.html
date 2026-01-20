@@ -26,7 +26,7 @@ const IMG_URL = 'https://i.postimg.cc/YSDwq0ms/map.webp';
 const IMG_WIDTH = 1005;
 const IMG_HEIGHT = 500;
 
-const map = L.map('map',{crs:L.CRS.Simple, minZoom:-2, maxZoom:2});
+const map = L.map('map',{crs:L.CRS.Simple, minZoom:0, maxZoom:3});
 const bounds=[[0,0],[IMG_HEIGHT,IMG_WIDTH]];
 L.imageOverlay(IMG_URL, bounds).addTo(map);
 map.fitBounds(bounds);
