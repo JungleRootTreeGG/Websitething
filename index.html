@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Earth Shipping Routes - Chained Routes</title>
+<title>Earth Shipping Routes - Manual Routes</title>
 <link
   rel="stylesheet"
   href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -25,15 +25,20 @@
 const IMG_URL = 'https://i.postimg.cc/YSDwq0ms/map.webp';
 const IMG_WIDTH = 1005;
 const IMG_HEIGHT = 500;
+
 const map = L.map('map',{crs:L.CRS.Simple, minZoom:-2, maxZoom:2});
 const bounds=[[0,0],[IMG_HEIGHT,IMG_WIDTH]];
-L.imageOverlay(IMG_URL,bounds).addTo(map);
+L.imageOverlay(IMG_URL, bounds).addTo(map);
 map.fitBounds(bounds);
 
 /* =========================
-   HELPER
+   HELPER TO INVERT Y
 ========================= */
 function invertY(y){ return IMG_HEIGHT - y; }
+
+/* =========================
+   PORT ICON
+========================= */
 function createPortIcon(selected=false){
   return L.icon({ 
     iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
@@ -83,9 +88,9 @@ const portMarkers={};
 let selectedPorts=[];
 let routeLine=null;
 
-// Add markers
+// Add markers for ports
 ports.forEach(port=>{
-  const marker=L.marker(port.coords,{icon:createPortIcon(false),title:port.name}).addTo(map);
+  const marker=L.marker(port.coords,{icon:createPortIcon(false), title:port.name}).addTo(map);
   portMarkers[port.name]=marker;
   marker.on('click',()=>handlePortClick(port));
 });
@@ -100,41 +105,28 @@ function updatePortIcons(){
 function handlePortClick(port){
   if(selectedPorts.some(p=>p.name===port.name)) return;
   selectedPorts.push(port);
-  if(selectedPorts.length>2) selectedPorts.shift();
+  if(selectedPorts.length>2) selectedPorts.shift(); // only keep last 2 clicks
   updatePortIcons();
   updateRoute();
 }
 
-/* =========================
-   ROUTE CHAINING
-========================= */
-function getRouteCoords(startName,endName){
-  // 1) direct route exists
-  let route = routes.find(r => 
-    (r.from===startName && r.to===endName) || (r.from===endName && r.to===startName)
-  );
-  if(route) return route.coords;
-
-  // 2) try to chain through intermediate ports
-  for(let r1 of routes){
-    const inter = r1.from===startName ? r1.to : r1.from===startName ? r1.to : r1.from;
-    if(r1.from===startName || r1.to===startName){
-      const intermediate = r1.from===startName ? r1.to : r1.from;
-      const r2 = routes.find(r2=>
-        (r2.from===intermediate && r2.to===endName) || (r2.from===endName && r2.to===intermediate)
-      );
-      if(r2){
-        let coords = [...r1.coords];
-        coords.pop(); // remove overlapping point
-        coords.push(...r2.coords);
-        return coords;
-      }
-    }
-  }
-
-  return null; // no route found
-}
-
 function updateRoute(){
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
-  if(selectedPorts.lengt
+  if(selectedPorts.length<2) return;
+
+  const start=selectedPorts[0].name;
+  const end=selectedPorts[1].name;
+
+  // Find pre-defined route (both directions)
+  const route=routes.find(r=>
+    (r.from===start && r.to===end) || (r.from===end && r.to===start)
+  );
+
+  if(!route) return; // No route defined
+
+  routeLine=L.polyline(route.coords,{color:'#00bcd4', weight:4, opacity:0.9}).addTo(map);
+  map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
+}
+</script>
+</body>
+</html>
