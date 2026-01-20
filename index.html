@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>Earth Shipping Routes</title>
+  <title>Earth Shipping Routes - Layers Edition</title>
 
   <link rel="stylesheet" href="https://unpkg.com" />
 
@@ -25,73 +25,43 @@
   const IMG_URL = './assets/world.png';
   const IMG_WIDTH = 1005;
   const IMG_HEIGHT = 500;
-  const MC_SCALE = 750; // 1 pixel = 750 Minecraft blokken
 
-  // Map Setup
   const map = L.map('map', {
     crs: L.CRS.Simple,
     minZoom: -1,
     maxZoom: 2
   });
+
   const bounds = [, [IMG_HEIGHT, IMG_WIDTH]];
   L.imageOverlay(IMG_URL, bounds).addTo(map);
   map.fitBounds(bounds);
 
   /* =========================
-     2. HAVEN DATA (Berekend uit MC Coördinaten)
+     2. HAVEN DATA (Handmatige Posities)
      ========================= */
-  // De MC coördinaten die je gaf:
+  // De structuur is [Y (van bovenaf), X (van linksaf)]
   const ports = [
-    { name: 'Amsterdam',   mcX: 674,   mcZ: 147 },
-    { name: 'London',      mcX: 50,    mcZ: -7034 },
-    { name: 'Kaliningrad', mcX: 2769,  mcZ: -7486 },
-    { name: 'Rotterdam',   mcX: 700,   mcZ: 200 }, 
-    { name: 'New York',    mcX: -5000, mcZ: -500 }, 
-    { name: 'Singapore',   mcX: 8000,  mcZ: 4000 } 
+    { name: 'Amsterdam',   pos: }, // Placeholder
+    { name: 'Florida',     pos: },
+    { name: 'London',      pos: },
+    { name: 'New York',    pos: [] },
+    { name: 'Singapore',   pos: [] }
   ];
 
-  // Bepaal de referentiehaven (Amsterdam)
-  const refPort = ports.find(p => p.name === 'Amsterdam');
-  // Bepaal de pixelpositie van Amsterdam (geschat op het midden van de kaart)
-  const refPixelY = IMG_HEIGHT / 2; // Ongeveer 250
-  const refPixelX = IMG_WIDTH / 2;  // Ongeveer 500
-
-  // Functie om Minecraft X, Z naar Pixel [Y, X] te converteren met schaal
-  function mcToPoint(mcX, mcZ) {
-    // Verschil in MC coördinaten
-    const deltaX_mc = mcX - refPort.mcX;
-    const deltaZ_mc = mcZ - refPort.mcZ;
-
-    // Converteer verschil naar pixels met de schaal
-    const deltaX_px = deltaX_mc / MC_SCALE;
-    const deltaY_px = deltaZ_mc / MC_SCALE; // Let op: Z is vaak verticaal in MC, Y in pixels
-
-    // Tel op bij het referentiepunt (Z-as is vaak omgekeerd op 2D kaarten)
-    const x = refPixelX + deltaX_px;
-    const y = refPixelY - deltaY_px; // Minteken om Z om te keren
-
-    return [y, x];
-  }
-  
-  // Bereken de werkelijke pixelposities voor alle havens
-  ports.forEach(p => {
-    p.pos = mcToPoint(p.mcX, p.mcZ);
-  });
-
   /* =========================
-     3. ROUTE LAYERS (Handmatig in te vullen met PIXEL waarden)
+     3. ROUTE LAYERS (De Tekeningen)
      ========================= */
   const routeData = {
-    'Amsterdam-London': [
-        ports.find(p => p.name === 'Amsterdam').pos,
+    'Florida-London': [
+        ports.find(p => p.name === 'Florida').pos,
+       , // Gebruik klik-hulp om punten in de oceaan te bepalen
+       ,
         ports.find(p => p.name === 'London').pos
     ],
     'Amsterdam-New York': [
-     ports.find(p => p.name === 'Amsterdam').pos,
-     mcToPoint(-2000, -1000), // Een tussenpunt op de Atlantische Oceaan
-     ports.find(p => p.name === 'New York').pos
+        // Nog in te vullen
     ],
-    // Voeg hier meer combinaties toe...
+    'Amsterdam-Singapore': []
   };
 
   /* =========================
@@ -107,39 +77,41 @@
   });
 
   ports.forEach(port => {
-    const marker = L.marker(port.pos, { icon: anchorIcon }).addTo(map);
-    marker.bindTooltip(port.name, { permanent: false, direction: 'top' });
+    if (port.pos.length === 0) return; // Sla placeholders over
+    const marker = L.marker(port.pos, { icon: anchorIcon, title: port.name }).addTo(map);
     marker.on('click', () => {
-      if (selectedPorts.includes(port)) return;
-      selectedPorts.push(port);
-      if (selectedPorts.length > 2) selectedPorts.shift();
-      if (selectedPorts.length === 2) {
-        drawRoute(selectedPorts.name, selectedPorts.name);
-      }
+      handlePortSelection(port);
     });
   });
 
+  function handlePortSelection(port) {
+    if (selectedPorts.includes(port)) return;
+    if (selectedPorts.length >= 2) selectedPorts = [];
+    selectedPorts.push(port);
+    if (selectedPorts.length === 2) {
+      drawRoute(selectedPorts.name, selectedPorts.name);
+    }
+  }
+
   function drawRoute(p1, p2) {
     if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-    const path = routeData[`${p1}-${p2}`] || routeData[`${p2}-${p1}`];
+    let path = routeData[`${p1}-${p2}`] || routeData[`${p2}-${p1}`];
     if (path) {
-      currentRouteLayer = L.polyline(path, {
-        color: '#00e5ff',
-        weight: 4,
-        dashArray: '5, 10'
-      }).addTo(map);
+      currentRouteLayer = L.polyline(path, { color: '#00bcd4', weight: 5, opacity: 0.8 }).addTo(map);
       map.fitBounds(currentRouteLayer.getBounds(), { padding: });
-    } else {
-      console.log(`Geen route gevonden voor ${p1} naar ${p2}`);
     }
   }
 
   /* =========================
-     5. DEBUG HULP
+     5. KLIK-HULP (Voor jou om in te vullen)
      ========================= */
   map.on('click', function(e) {
-    console.log(`Geklikte pixel locatie: [${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}]`);
+    const y = Math.round(e.latlng.lat);
+    const x = Math.round(e.latlng.lng);
+    console.log(`Geklikte pixel locatie: [${y}, ${x}]`);
+    navigator.clipboard.writeText(`[${y}, ${x}]`);
   });
 </script>
+
 </body>
 </html>
