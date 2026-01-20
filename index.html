@@ -4,19 +4,41 @@
   <meta charset="UTF-8" />
   <title>Earth Shipping Routes - Layers Edition</title>
 
-  <link rel="stylesheet" href="https://unpkg.com" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
 
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; width: 100%; background: #050814; color: #f5f5f5; font-family: sans-serif; }
-    #map { height: 100vh; width: 100vw; }
-    .leaflet-container { background: #000; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background: #050814;
+      color: #f5f5f5;
+      font-family: sans-serif;
+    }
+
+    #map {
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .leaflet-container {
+      background: #000;
+    }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
 
-<script src="https://unpkg.com"></script>
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  crossorigin=""
+></script>
 
 <script>
   /* =========================
@@ -27,7 +49,7 @@
   const IMG_HEIGHT = 500;
 
   const map = L.map('map', {
-    crs: L.CRS.Simple,
+    crs: L.CRS.Simple, // Gebruik simpel CRS voor pixel-plaatsing
     minZoom: -1,
     maxZoom: 2
   });
@@ -37,67 +59,94 @@
   map.fitBounds(bounds);
 
   /* =========================
-     2. HAVEN DATA (Handmatige Posities)
+     2. HAVEN DATA (Pixel Posities)
      ========================= */
   // De structuur is [Y (van bovenaf), X (van linksaf)]
   const ports = [
-    { name: 'Amsterdam',   pos: [250, 500] }, // Placeholder (gebruik klik-hulp om te vervangen)
-    { name: 'Rotterdam',   pos: [250, 510] }, // Placeholder
-    { name: 'London',      pos: [50, 400] },
-    { name: 'Florida',     pos: [274, 171] },
-    { name: 'New York',    pos: [200, 200] }, // Placeholder
-    { name: 'Singapore',   pos: [350, 750] }  // Placeholder
+    { name: 'Amsterdam',   pos: }, // Klik-hulp nodig
+    { name: 'Rotterdam',   pos: }, // Klik-hulp nodig
+    { name: 'London',      pos: }, // Jouw coördinaat
+    { name: 'Florida',     pos: }, // Jouw coördinaat
+    { name: 'New York',    pos: }, // Klik-hulp nodig
+    { name: 'Los Angeles', pos: }, // Klik-hulp nodig
+    { name: 'Singapore',   pos: }  // Klik-hulp nodig
   ];
 
   /* =========================
      3. ROUTE LAYERS (De Tekeningen)
      ========================= */
+  // Definieer hier de exacte routes als lijsten met pixelpunten [Y, X]
   const routeData = {
     'Florida-London': [
         ports.find(p => p.name === 'Florida').pos,
        , // Gebruik klik-hulp om punten in de oceaan te bepalen
-       , // Plak hier de [Y, X] waarden
+       , // Plak hier de [Y, X] waarden (bijv. [400, 150])
        ,
         ports.find(p => p.name === 'London').pos
     ],
     'Amsterdam-New York': [], // Nog in te vullen
-    'Amsterdam-Singapore': []  // Nog in te vullen
+    'London-New York': []     // Nog in te vullen
   };
 
   /* =========================
      4. LOGICA & INTERACTIE
      ========================= */
+  const portMarkers = {};
   let selectedPorts = [];
   let currentRouteLayer = null;
 
-  const anchorIcon = L.icon({
-    iconUrl: './assets/anchor.png',
-    iconSize: [42, 42],      // Standaardwaarde
-    iconAnchor: [21, 21]     // Standaardwaarde
-  });
-
-  ports.forEach(port => {
-    const marker = L.marker(port.pos, { icon: anchorIcon, title: port.name }).addTo(map);
-    marker.on('click', () => {
-      handlePortSelection(port);
+  function createPortIcon(selected) {
+    return L.icon({
+      iconUrl: './assets/anchor.png',
+      iconSize: selected ? : [42, 42],
+      iconAnchor:
     });
-  });
-
-  function handlePortSelection(port) {
-    if (selectedPorts.includes(port)) return;
-    if (selectedPorts.length >= 2) selectedPorts = [];
-    selectedPorts.push(port);
-    if (selectedPorts.length === 2) {
-      drawRoute(selectedPorts.name, selectedPorts.name);
-    }
   }
 
-  function drawRoute(p1, p2) {
-    if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-    let path = routeData[`${p1}-${p2}`] || routeData[`${p2}-${p1}`];
+  ports.forEach(port => {
+    // Plaats alleen markers als de positie is ingevuld (niet leeg [])
+    if (port.pos.length === 2) { 
+        const marker = L.marker(port.pos, {
+          icon: createPortIcon(false),
+          title: port.name
+        }).addTo(map);
+
+        portMarkers[port.name] = marker;
+        marker.on('click', () => handlePortClick(port));
+    }
+  });
+
+  function handlePortClick(port) {
+    if (selectedPorts.some(p => p.name === port.name)) return;
+    selectedPorts.push(port);
+    if (selectedPorts.length > 2) selectedPorts.shift();
+    updateRoute();
+  }
+
+  function updateRoute() {
+    if (currentRouteLayer) {
+      map.removeLayer(currentRouteLayer);
+      currentRouteLayer = null;
+    }
+
+    if (selectedPorts.length < 2) return;
+
+    const start = selectedPorts[0];
+    const end = selectedPorts[1];
+    
+    // Zoek de route in beide richtingen (bijv. Florida-London of London-Florida)
+    const path = routeData[`${start.name}-${end.name}`] || routeData[`${end.name}-${start.name}`];
+
     if (path) {
-      currentRouteLayer = L.polyline(path, { color: '#00bcd4', weight: 5, opacity: 0.8 }).addTo(map);
-      map.fitBounds(currentRouteLayer.getBounds(), { padding: [40, 40] }); // Standaardwaarde
+      currentRouteLayer = L.polyline(path, {
+        color: '#00bcd4',
+        weight: 4,
+        opacity: 0.9
+      }).addTo(map);
+
+      map.fitBounds(currentRouteLayer.getBounds(), { padding: });
+    } else {
+        console.log(`Geen gedefinieerde route layer gevonden voor ${start.name} en ${end.name}.`);
     }
   }
 
