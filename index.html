@@ -67,27 +67,28 @@ iframe {
   <h2>Place Your Shipping Order</h2>
   <form id="orderForm">
     <label>From Port:
-      <input type="text" id="fromPort" readonly>
+      <input type="text" id="fromPort" readonly required>
     </label>
 
     <label>To Port:
-      <input type="text" id="toPort" readonly>
+      <input type="text" id="toPort" readonly required>
     </label>
 
     <label>Discord Username:
-      <input type="text" id="discord">
+      <input type="text" id="discord" required>
     </label>
 
     <label>In-game Username:
-      <input type="text" id="ingame">
+      <input type="text" id="ingame" required>
     </label>
 
     <label>Cargo Value ($):
-      <input type="number" id="cargoValue" min="0" value="0">
+      <input type="number" id="cargoValue" min="0" value="0" required>
     </label>
 
     <label>Container Type:
-      <select id="containerType">
+      <select id="containerType" required>
+        <option value="">Select</option>
         <option value="Civilian">Civilian</option>
         <option value="Military">Military</option>
       </select>
@@ -96,12 +97,12 @@ iframe {
     <!-- Hidden field for nation if Military -->
     <div id="militaryNationContainer" style="display:none; margin-bottom:10px;">
       <label>Nation:
-        <input type="text" id="militaryNation" placeholder="Enter your nation">
+        <input type="text" id="militaryNation" placeholder="Enter your nation" required>
       </label>
     </div>
 
     <label>Container Number:
-      <input type="text" id="containerNumber" placeholder="UAE 1234" required pattern="[A-Z]{3} \d{4}">
+      <input type="text" id="containerNumber" placeholder="AAA 1234" required pattern="[A-Z]{3} \d{4}">
     </label>
     <small>Must be 3 capital letters followed by 4 digits (e.g., UAE 1234)</small>
 
@@ -109,7 +110,7 @@ iframe {
       <input type="text" id="totalPrice" readonly>
     </label>
 
-    <button type="submit">Submit Order</button>
+    <button type="submit" id="submitOrder">Submit Order</button>
   </form>
 </div>
 
@@ -124,8 +125,10 @@ const militaryNationContainer = document.getElementById('militaryNationContainer
 containerTypeSelect.addEventListener('change', () => {
   if(containerTypeSelect.value === "Military"){
     militaryNationContainer.style.display = "block";
+    document.getElementById('militaryNation').required = true;
   } else {
     militaryNationContainer.style.display = "none";
+    document.getElementById('militaryNation').required = false;
   }
 });
 
@@ -149,22 +152,30 @@ function calculatePrice(){
 
 document.getElementById('cargoValue').addEventListener('input', calculatePrice);
 
-// Handle form submission to Discord webhook
-document.getElementById('orderForm').addEventListener('submit', async (e)=>{
+// Handle form submission
+const form = document.getElementById('orderForm');
+const submitBtn = document.getElementById('submitOrder');
+
+form.addEventListener('submit', async (e)=>{
   e.preventDefault();
 
+  // Validate container number format
   const containerNumber = document.getElementById('containerNumber').value.trim();
   const regex = /^[A-Z]{3} \d{4}$/;
-
   if(!regex.test(containerNumber)){
-    alert("Container number is invalid! Must be 3 capital letters followed by 4 digits (e.g., UAE 1234).");
+    alert("Container number must be 3 capital letters followed by 4 digits (e.g., UAE 1234).");
     return;
   }
 
+  // Validate route selection
   if(routePortNames.length === 0){
     alert("Please select a route on the map first!");
     return;
   }
+
+  // Disable button to prevent spam
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Submitting...";
 
   const orderData = {
     fromPort: document.getElementById('fromPort').value,
@@ -179,9 +190,8 @@ document.getElementById('orderForm').addEventListener('submit', async (e)=>{
     nation: containerTypeSelect.value === "Military" ? document.getElementById('militaryNation').value : null
   };
 
-  // Replace with your actual Discord webhook URL
-  const webhookURL = "https://discord.com/api/webhooks/1463234591706976543/1wTw6W8jXRmiOMTNjzbilt4AJxPGVmC4FTbPt3OQGvN3TRgRuAbQN75V0Q7jlOTToT4o";
-
+  // Prepare Discord webhook message
+  const webhookURL = "YOUR_DISCORD_WEBHOOK_HERE";
   let content = `📦 **New Shipping Order**
 **From:** ${orderData.fromPort}
 **To:** ${orderData.toPort}
@@ -196,19 +206,20 @@ document.getElementById('orderForm').addEventListener('submit', async (e)=>{
 **Total Price:** $${orderData.totalPrice.toFixed(2)}`;
 
   try {
-    const response = await fetch(webhookURL, {
+    await fetch(webhookURL, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json' },
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ content })
     });
-    if(response.ok){
-      alert('Order sent to Discord successfully!');
-    } else {
-      alert('Failed to send order to Discord.');
-    }
+
+    // Redirect to confirmation page
+    window.location.href = "confirmation.html";
+
   } catch(err){
     console.error(err);
-    alert('Network error. Could not send order.');
+    alert("Failed to send order.");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Order";
   }
 });
 </script>
