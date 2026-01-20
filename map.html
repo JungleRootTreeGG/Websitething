@@ -138,6 +138,23 @@ function updateRoute(){
 
   routeLine=L.polyline(route.coords,{color:'#00bcd4', weight:4, opacity:0.9}).addTo(map);
   map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
+  // Build the list of ports along the route (including start and end)
+let portsAlongRoute = [start.name];
+
+// If getRouteCoords returns multiple segments through intermediate ports, include them
+// (assuming getRouteCoords returns coords, you should also track the port names along the path)
+if(selectedPorts.length === 2) {
+    // Example: if you already track intermediate ports in your route chaining:
+    const route = findRoutePortNames(start.name, end.name); // you would implement this function
+    portsAlongRoute = route; // this should be an array like ['Miami', 'London', 'Konigsberg']
+}
+
+// Send the route info to the parent iframe
+window.parent.postMessage({
+    startPort: start.name,
+    endPort: end.name,
+    portsAlongRoute: portsAlongRoute
+}, '*');
 }
 </script>
 </body>
