@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Earth Shipping Routes - Layers Edition</title>
+  <title>Earth Shipping Routes</title>
 
   <link
     rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    href="https://unpkg.com"
     crossorigin=""
   />
 
@@ -18,7 +18,7 @@
       width: 100%;
       background: #050814;
       color: #f5f5f5;
-      font-family: sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     #map {
@@ -36,21 +36,22 @@
 <div id="map"></div>
 
 <script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  src="https://unpkg.com"
   crossorigin=""
 ></script>
 
 <script>
   /* =========================
-     1. CONFIGURATIE & KAART
+     MAP IMAGE CONFIGURATION
      ========================= */
+
   const IMG_URL = './assets/world.png';
   const IMG_WIDTH = 1005;
   const IMG_HEIGHT = 500;
 
   const map = L.map('map', {
-    crs: L.CRS.Simple, // Gebruik simpel CRS voor pixel-plaatsing
-    minZoom: -1,
+    crs: L.CRS.Simple,
+    minZoom: -2,
     maxZoom: 2
   });
 
@@ -58,106 +59,105 @@
   L.imageOverlay(IMG_URL, bounds).addTo(map);
   map.fitBounds(bounds);
 
-  /* =========================
-     2. HAVEN DATA (Pixel Posities)
-     ========================= */
-  // De structuur is [Y (van bovenaf), X (van linksaf)]
-  const ports = [
-    { name: 'Amsterdam',   pos: }, // Klik-hulp nodig
-    { name: 'Rotterdam',   pos: }, // Klik-hulp nodig
-    { name: 'London',      pos: }, // Jouw coördinaat
-    { name: 'Florida',     pos: }, // Jouw coördinaat
-    { name: 'New York',    pos: }, // Klik-hulp nodig
-    { name: 'Los Angeles', pos: }, // Klik-hulp nodig
-    { name: 'Singapore',   pos: }  // Klik-hulp nodig
-  ];
+  function latLonToPoint(lat, lon) {
+    const x = (lon + 180) / 360 * IMG_WIDTH;
+    const y = (90 - lat) / 180 * IMG_HEIGHT;
+    return [y, x];
+  }
 
   /* =========================
-     3. ROUTE LAYERS (De Tekeningen)
+     PORT ICON (PNG, TRANSPARENT)
      ========================= */
-  // Definieer hier de exacte routes als lijsten met pixelpunten [Y, X]
-  const routeData = {
-    'Florida-London': [
-        ports.find(p => p.name === 'Florida').pos,
-       , // Gebruik klik-hulp om punten in de oceaan te bepalen
-       , // Plak hier de [Y, X] waarden (bijv. [400, 150])
-       ,
-        ports.find(p => p.name === 'London').pos
-    ],
-    'Amsterdam-New York': [], // Nog in te vullen
-    'London-New York': []     // Nog in te vullen
-  };
-
-  /* =========================
-     4. LOGICA & INTERACTIE
-     ========================= */
-  const portMarkers = {};
-  let selectedPorts = [];
-  let currentRouteLayer = null;
 
   function createPortIcon(selected) {
     return L.icon({
       iconUrl: './assets/anchor.png',
-      iconSize: selected ? : [42, 42],
+      iconSize: selected ? : :,
       iconAnchor:
     });
   }
 
-  ports.forEach(port => {
-    // Plaats alleen markers als de positie is ingevuld (niet leeg [])
-    if (port.pos.length === 2) { 
-        const marker = L.marker(port.pos, {
-          icon: createPortIcon(false),
-          title: port.name
-        }).addTo(map);
+  /* =========================
+     PORT DATA
+     ========================= */
 
-        portMarkers[port.name] = marker;
-        marker.on('click', () => handlePortClick(port));
-    }
+  const ports = [
+    { name: 'Amsterdam',   lat: 52.3791, lon: 4.9003 },
+    { name: 'Rotterdam',   lat: 51.9244, lon: 4.4777 },
+    { name: 'London',      lat: 51.5074, lon: -0.1278 },
+    { name: 'New York',    lat: 40.7128, lon: -74.0060 },
+    { name: 'Los Angeles', lat: 33.7405, lon: -118.2775 },
+    { name: 'Kaliningrad', lat: 54.7104, lon: 20.4522 },
+    { name: 'Hamburg',     lat: 53.5461, lon: 9.9661 },
+    { name: 'Singapore',   lat: 1.3521,  lon: 103.8198 },
+    { name: 'Shanghai',    lat: 31.2304, lon: 121.4737 },
+    { name: 'Dubai',       lat: 25.2769, lon: 55.2962 }
+  ];
+
+  ports.forEach(p => {
+    p.coords = latLonToPoint(p.lat, p.lon);
   });
 
-  function handlePortClick(port) {
-    if (selectedPorts.some(p => p.name === port.name)) return;
-    selectedPorts.push(port);
-    if (selectedPorts.length > 2) selectedPorts.shift();
-    updateRoute();
-  }
-
-  function updateRoute() {
-    if (currentRouteLayer) {
-      map.removeLayer(currentRouteLayer);
-      currentRouteLayer = null;
-    }
-
-    if (selectedPorts.length < 2) return;
-
-    const start = selectedPorts[0];
-    const end = selectedPorts[1];
-    
-    // Zoek de route in beide richtingen (bijv. Florida-London of London-Florida)
-    const path = routeData[`${start.name}-${end.name}`] || routeData[`${end.name}-${start.name}`];
-
-    if (path) {
-      currentRouteLayer = L.polyline(path, {
-        color: '#00bcd4',
-        weight: 4,
-        opacity: 0.9
-      }).addTo(map);
-
-      map.fitBounds(currentRouteLayer.getBounds(), { padding: });
-    } else {
-        console.log(`Geen gedefinieerde route layer gevonden voor ${start.name} en ${end.name}.`);
-    }
-  }
-
   /* =========================
-     5. KLIK-HULP (Voor jou om in te vullen)
+     REST VAN DE LOGICA (A*, etc.)
      ========================= */
+
+  const seaNodes = [
+    { id: 'NA1', lat: 55, lon: -20, neighbors: ['NA2', 'NA3'] },
+    { id: 'NA2', lat: 50, lon: -40, neighbors: ['NA1', 'NA4'] },
+    { id: 'NA3', lat: 50, lon: 0,   neighbors: ['NA1', 'EU1'] },
+    { id: 'NA4', lat: 40, lon: -50, neighbors: ['NA2', 'NA5', 'SA1'] },
+    { id: 'NA5', lat: 30, lon: -60, neighbors: ['NA4', 'CA1'] },
+    { id: 'EU1', lat: 45, lon: 10,  neighbors: ['NA3', 'MED1'] },
+    { id: 'MED1',lat: 35, lon: 20,  neighbors: ['EU1', 'SUEZ'] },
+    { id: 'SUEZ',lat: 30, lon: 32,  neighbors: ['MED1', 'IO1'] },
+    { id: 'IO1', lat: 10, lon: 60,  neighbors: ['SUEZ', 'IO2', 'SEA1'] },
+    { id: 'IO2', lat: -10,lon: 70,  neighbors: ['IO1', 'AUS1'] },
+    { id: 'SEA1',lat: 5,  lon: 100, neighbors: ['IO1', 'SEA2'] },
+    { id: 'SEA2',lat: 10, lon: 120, neighbors: ['SEA1', 'PAC1'] },
+    { id: 'PAC1',lat: 20, lon: 150, neighbors: ['SEA2', 'PAC2'] },
+    { id: 'PAC2',lat: 30, lon: -150,neighbors: ['PAC1', 'NA5'] },
+    { id: 'SA1', lat: 0,  lon: -40, neighbors: ['NA4', 'SA2'] },
+    { id: 'SA2', lat: -30,lon: -30, neighbors: ['SA1', 'AF1'] },
+    { id: 'AF1', lat: -30,lon: 10,  neighbors: ['SA2', 'IO2'] },
+    { id: 'AUS1',lat: -20,lon: 120, neighbors: ['IO2', 'PAC1'] }
+  ];
+
+  const seaNodeById = {};
+  seaNodes.forEach(n => { n.coords = latLonToPoint(n.lat, n.lon); seaNodeById[n.id] = n; });
+  function distance(a, b) { const dx = a[0] - b[0]; const dy = a[1] - b[1]; return Math.sqrt(dx * dx + dy * dy); }
+  function findNearestSeaNode(coord) { let best = null; let bestDist = Infinity; seaNodes.forEach(node => { const d = distance(coord, node.coords); if (d < bestDist) { bestDist = d; best = node; } }); return best; }
+  function findSeaRoute(startNode, endNode) { /* ... A* logic ... */
+    const openSet = new Set([startNode.id]); const cameFrom = {}; const gScore = {}; const fScore = {}; seaNodes.forEach(n => { gScore[n.id] = Infinity; fScore[n.id] = Infinity; }); gScore[startNode.id] = 0; fScore[startNode.id] = distance(startNode.coords, endNode.coords); function lowestF() { let best = null; let bestVal = Infinity; openSet.forEach(id => { if (fScore[id] < bestVal) { bestVal = fScore[id]; best = id; } }); return best; } while (openSet.size) { const currentId = lowestF(); if (currentId === endNode.id) { const path = []; let cur = currentId; while (cur) { path.unshift(seaNodeById[cur]); cur = cameFrom[cur]; } return path; } openSet.delete(currentId); const current = seaNodeById[currentId]; current.neighbors.forEach(nid => { const neighbor = seaNodeById[nid]; const tentative = gScore[currentId] + distance(current.coords, neighbor.coords); if (tentative < gScore[nid]) { cameFrom[nid] = currentId; gScore[nid] = tentative; fScore[nid] = tentative + distance(neighbor.coords, endNode.coords); openSet.add(nid); } }); } return null; }
+
+
+  /* ========================= PORT INTERACTION ========================= */
+  const portMarkers = {}; let selectedPorts = []; let routeLine = null;
+  ports.forEach(port => {
+    const marker = L.marker(port.coords, { icon: createPortIcon(false), title: port.name }).addTo(map);
+    portMarkers[port.name] = marker;
+    marker.on('click', () => handlePortClick(port));
+  });
+  function updatePortIcons() { ports.forEach(port => { const selected = selectedPorts.some(p => p.name === port.name); portMarkers[port.name].setIcon(createPortIcon(selected)); }); }
+  function handlePortClick(port) { if (selectedPorts.some(p => p.name === port.name)) return; selectedPorts.push(port); if (selectedPorts.length > 2) selectedPorts.shift(); updatePortIcons(); updateRoute(); }
+  function updateRoute() {
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+    if (selectedPorts.length < 2) return;
+    const start = selectedPorts; const end = selectedPorts;
+    const seaPath = findSeaRoute( findNearestSeaNode(start.coords), findNearestSeaNode(end.coords) );
+    if (!seaPath) return;
+    const coords = [start.coords, ...seaPath.map(n => n.coords), end.coords];
+    routeLine = L.polyline(coords, { color: '#00bcd4', weight: 4, opacity: 0.9 }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+  }
+
+  /* ========================= KLIK-HULP ========================= */
   map.on('click', function(e) {
     const y = Math.round(e.latlng.lat);
     const x = Math.round(e.latlng.lng);
     console.log(`Geklikte pixel locatie: [${y}, ${x}]`);
   });
+
 </script>
 
 </body>
