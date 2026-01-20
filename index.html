@@ -41,11 +41,12 @@
      ========================= */
   // De structuur is [Y (van bovenaf), X (van linksaf)]
   const ports = [
-    { name: 'Amsterdam',   pos: }, // Placeholder
-    { name: 'Florida',     pos: },
-    { name: 'London',      pos: },
-    { name: 'New York',    pos: [] },
-    { name: 'Singapore',   pos: [] }
+    { name: 'Amsterdam',   pos: [250, 500] }, // Placeholder (gebruik klik-hulp om te vervangen)
+    { name: 'Rotterdam',   pos: [250, 510] }, // Placeholder
+    { name: 'London',      pos: [50, 400] },
+    { name: 'Florida',     pos: [274, 171] },
+    { name: 'New York',    pos: [200, 200] }, // Placeholder
+    { name: 'Singapore',   pos: [350, 750] }  // Placeholder
   ];
 
   /* =========================
@@ -55,13 +56,12 @@
     'Florida-London': [
         ports.find(p => p.name === 'Florida').pos,
        , // Gebruik klik-hulp om punten in de oceaan te bepalen
+       , // Plak hier de [Y, X] waarden
        ,
         ports.find(p => p.name === 'London').pos
     ],
-    'Amsterdam-New York': [
-        // Nog in te vullen
-    ],
-    'Amsterdam-Singapore': []
+    'Amsterdam-New York': [], // Nog in te vullen
+    'Amsterdam-Singapore': []  // Nog in te vullen
   };
 
   /* =========================
@@ -72,12 +72,11 @@
 
   const anchorIcon = L.icon({
     iconUrl: './assets/anchor.png',
-    iconSize:,
-    iconAnchor:
+    iconSize: [42, 42],      // Standaardwaarde
+    iconAnchor: [21, 21]     // Standaardwaarde
   });
 
   ports.forEach(port => {
-    if (port.pos.length === 0) return; // Sla placeholders over
     const marker = L.marker(port.pos, { icon: anchorIcon, title: port.name }).addTo(map);
     marker.on('click', () => {
       handlePortSelection(port);
@@ -98,7 +97,7 @@
     let path = routeData[`${p1}-${p2}`] || routeData[`${p2}-${p1}`];
     if (path) {
       currentRouteLayer = L.polyline(path, { color: '#00bcd4', weight: 5, opacity: 0.8 }).addTo(map);
-      map.fitBounds(currentRouteLayer.getBounds(), { padding: });
+      map.fitBounds(currentRouteLayer.getBounds(), { padding: [40, 40] }); // Standaardwaarde
     }
   }
 
@@ -109,7 +108,6 @@
     const y = Math.round(e.latlng.lat);
     const x = Math.round(e.latlng.lng);
     console.log(`Geklikte pixel locatie: [${y}, ${x}]`);
-    navigator.clipboard.writeText(`[${y}, ${x}]`);
   });
 </script>
 
