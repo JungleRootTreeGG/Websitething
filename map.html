@@ -3,11 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Earth Shipping Routes - Manual Routes</title>
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  crossorigin=""
-/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <style>
   html, body { margin:0; padding:0; height:100%; width:100%; }
   #map { height:100vh; width:100vw; }
@@ -19,7 +15,7 @@
     font-weight: bold;
     font-size: 14px;
     text-shadow: 1px 1px 2px #000;
-    pointer-events: none; /* so clicks go through to the marker */
+    pointer-events: none; /* clicks pass through to anchor */
   }
 </style>
 </head>
@@ -69,14 +65,92 @@ const ports=[
    PRE-DEFINED ROUTES
 ========================= */
 const routes=[
-  {
-    from:'Miami',
-    to:'London',
-    coords:[
-      [invertY(171), 273],
-      [invertY(102), 503]
-    ]
-  },
-  {
-    from:'Miami',
-    to:'Konigsberg',
+  { from:'Miami', to:'London', coords:[[invertY(171),273],[invertY(102),503]] },
+  { from:'Miami', to:'Konigsberg', coords:[[invertY(171),273],[invertY(102),503],[invertY(93),520],[invertY(84),528],[invertY(93),538],[invertY(97),560]] },
+  { from:'London', to:'Konigsberg', coords:[[invertY(102),503],[invertY(93),520],[invertY(84),528],[invertY(93),538],[invertY(97),560]] }
+];
+
+/* =========================
+   PORT INTERACTION
+========================= */
+const portMarkers={};
+let selectedPorts=[];
+let routeLine=null;
+
+// Add markers and separate labels
+ports.forEach(port=>{
+  const marker = L.marker(port.coords, {icon:createPortIcon(false), title:port.name}).addTo(map);
+  portMarkers[port.name] = marker;
+
+  // separate label above anchor
+  L.marker(port.coords, {
+    icon: L.divIcon({
+      className: 'port-label',
+      html: port.name,
+      iconAnchor: [0,-25] // position above anchor
+    })
+  }).addTo(map);
+
+  marker.on('click', ()=>handlePortClick(port));
+});
+
+// Update icons visually
+function updatePortIcons(){
+  ports.forEach(port=>{
+    const selected = selectedPorts.some(p=>p.name===port.name);
+    portMarkers[port.name].setIcon(createPortIcon(selected));
+  });
+}
+
+// Handle port click
+function handlePortClick(port){
+  if(selectedPorts.some(p=>p.name===port.name)) return;
+  selectedPorts.push(port);
+  if(selectedPorts.length>2) selectedPorts.shift(); // keep last 2 clicks
+  updatePortIcons();
+  updateRoute();
+}
+
+// Deselect all ports by clicking empty map
+map.on('click', e=>{
+  const clickedOnPort = ports.some(p=>{
+    const dx = e.latlng.lat - p.coords[0];
+    const dy = e.latlng.lng - p.coords[1];
+    return Math.sqrt(dx*dx + dy*dy)<5; // 5px tolerance
+  });
+  if(!clickedOnPort){
+    selectedPorts=[];
+    updatePortIcons();
+    if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+    window.parent.postMessage({ startPort:null, endPort:null, portsAlongRoute:[] }, '*');
+  }
+});
+
+// Update route polyline
+function updateRoute(){
+  if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+  if(selectedPorts.length<2) return;
+
+  const start = selectedPorts[0].name;
+  const end = selectedPorts[1].name;
+
+  const route = routes.find(r=>(r.from===start && r.to===end)||(r.from===end && r.to===start));
+  if(!route) return;
+
+  routeLine = L.polyline(route.coords,{color:'#00bcd4',weight:4,opacity:0.9}).addTo(map);
+  map.fitBounds(routeLine.getBounds(),{padding:[40,40]});
+
+  let portsAlongRoute=[start];
+  ports.forEach(p=>{
+    if(p.name!==start && p.name!==end){
+      const match = route.coords.some(c=>c[0]===p.coords[0] && c[1]===p.coords[1]);
+      if(match) portsAlongRoute.push(p.name);
+    }
+  });
+  portsAlongRoute.push(end);
+
+  window.parent.postMessage({ startPort:start, endPort:end, portsAlongRoute }, '*');
+}
+</script>
+</body>
+</html>
