@@ -1,275 +1,145 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="UTF-8" />
   <title>Earth Shipping Routes</title>
 
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    crossorigin=""
-  />
+  <link rel="stylesheet" href="https://unpkg.com" />
 
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
-      background: #050814;
-      color: #f5f5f5;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    #map {
-      height: 100vh;
-      width: 100vw;
-    }
-
-    .leaflet-container {
-      background: #000;
-    }
+    html, body { margin: 0; padding: 0; height: 100%; width: 100%; background: #050814; color: #f5f5f5; font-family: sans-serif; }
+    #map { height: 100vh; width: 100vw; }
+    .leaflet-container { background: #000; }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
 
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  crossorigin=""
-></script>
+<script src="https://unpkg.com"></script>
 
 <script>
   /* =========================
-     MAP IMAGE CONFIGURATION
+     1. CONFIGURATIE & KAART
      ========================= */
-
   const IMG_URL = './assets/world.png';
   const IMG_WIDTH = 1005;
   const IMG_HEIGHT = 500;
+  const MC_SCALE = 750; // 1 pixel = 750 Minecraft blokken
 
+  // Map Setup
   const map = L.map('map', {
     crs: L.CRS.Simple,
-    minZoom: -2,
+    minZoom: -1,
     maxZoom: 2
   });
-
-  const bounds = [[0, 0], [IMG_HEIGHT, IMG_WIDTH]];
+  const bounds = [, [IMG_HEIGHT, IMG_WIDTH]];
   L.imageOverlay(IMG_URL, bounds).addTo(map);
   map.fitBounds(bounds);
 
-  function latLonToPoint(lat, lon) {
-    const x = (lon + 180) / 360 * IMG_WIDTH;
-    const y = (90 - lat) / 180 * IMG_HEIGHT;
+  /* =========================
+     2. HAVEN DATA (Berekend uit MC Coördinaten)
+     ========================= */
+  // De MC coördinaten die je gaf:
+  const ports = [
+    { name: 'Amsterdam',   mcX: 674,   mcZ: 147 },
+    { name: 'London',      mcX: 50,    mcZ: -7034 },
+    { name: 'Kaliningrad', mcX: 2769,  mcZ: -7486 },
+    { name: 'Rotterdam',   mcX: 700,   mcZ: 200 }, 
+    { name: 'New York',    mcX: -5000, mcZ: -500 }, 
+    { name: 'Singapore',   mcX: 8000,  mcZ: 4000 } 
+  ];
+
+  // Bepaal de referentiehaven (Amsterdam)
+  const refPort = ports.find(p => p.name === 'Amsterdam');
+  // Bepaal de pixelpositie van Amsterdam (geschat op het midden van de kaart)
+  const refPixelY = IMG_HEIGHT / 2; // Ongeveer 250
+  const refPixelX = IMG_WIDTH / 2;  // Ongeveer 500
+
+  // Functie om Minecraft X, Z naar Pixel [Y, X] te converteren met schaal
+  function mcToPoint(mcX, mcZ) {
+    // Verschil in MC coördinaten
+    const deltaX_mc = mcX - refPort.mcX;
+    const deltaZ_mc = mcZ - refPort.mcZ;
+
+    // Converteer verschil naar pixels met de schaal
+    const deltaX_px = deltaX_mc / MC_SCALE;
+    const deltaY_px = deltaZ_mc / MC_SCALE; // Let op: Z is vaak verticaal in MC, Y in pixels
+
+    // Tel op bij het referentiepunt (Z-as is vaak omgekeerd op 2D kaarten)
+    const x = refPixelX + deltaX_px;
+    const y = refPixelY - deltaY_px; // Minteken om Z om te keren
+
     return [y, x];
   }
-
-  /* =========================
-     PORT ICON (PNG, TRANSPARENT)
-     ========================= */
-
-  function createPortIcon(selected) {
-    return L.icon({
-      iconUrl: './assets/anchor.png',
-      iconSize: selected ? [48, 48] : [42, 42],
-      iconAnchor: [24, 24]
-    });
-  }
-
-  /* =========================
-     PORT DATA
-     ========================= */
-
-  const ports = [
-    { name: 'Amsterdam',   lat: 52.3791, lon: 4.9003 },
-    { name: 'Rotterdam',   lat: 51.9244, lon: 4.4777 },
-    { name: 'London',      lat: 51.5074, lon: -0.1278 },
-    { name: 'New York',    lat: 40.7128, lon: -74.0060 },
-    { name: 'Los Angeles', lat: 33.7405, lon: -118.2775 },
-    { name: 'Kaliningrad', lat: 54.7104, lon: 20.4522 },
-    { name: 'Hamburg',     lat: 53.5461, lon: 9.9661 },
-    { name: 'Singapore',   lat: 1.3521,  lon: 103.8198 },
-    { name: 'Shanghai',    lat: 31.2304, lon: 121.4737 },
-    { name: 'Dubai',       lat: 25.2769, lon: 55.2962 }
-  ];
-
+  
+  // Bereken de werkelijke pixelposities voor alle havens
   ports.forEach(p => {
-    p.coords = latLonToPoint(p.lat, p.lon);
+    p.pos = mcToPoint(p.mcX, p.mcZ);
   });
 
   /* =========================
-     SEA NODE GRAPH
+     3. ROUTE LAYERS (Handmatig in te vullen met PIXEL waarden)
      ========================= */
-
-  const seaNodes = [
-    { id: 'NA1', lat: 55, lon: -20, neighbors: ['NA2', 'NA3'] },
-    { id: 'NA2', lat: 50, lon: -40, neighbors: ['NA1', 'NA4'] },
-    { id: 'NA3', lat: 50, lon: 0,   neighbors: ['NA1', 'EU1'] },
-    { id: 'NA4', lat: 40, lon: -50, neighbors: ['NA2', 'NA5', 'SA1'] },
-    { id: 'NA5', lat: 30, lon: -60, neighbors: ['NA4', 'CA1'] },
-
-    { id: 'EU1', lat: 45, lon: 10,  neighbors: ['NA3', 'MED1'] },
-    { id: 'MED1',lat: 35, lon: 20,  neighbors: ['EU1', 'SUEZ'] },
-    { id: 'SUEZ',lat: 30, lon: 32,  neighbors: ['MED1', 'IO1'] },
-
-    { id: 'IO1', lat: 10, lon: 60,  neighbors: ['SUEZ', 'IO2', 'SEA1'] },
-    { id: 'IO2', lat: -10,lon: 70,  neighbors: ['IO1', 'AUS1'] },
-
-    { id: 'SEA1',lat: 5,  lon: 100, neighbors: ['IO1', 'SEA2'] },
-    { id: 'SEA2',lat: 10, lon: 120, neighbors: ['SEA1', 'PAC1'] },
-    { id: 'PAC1',lat: 20, lon: 150, neighbors: ['SEA2', 'PAC2'] },
-    { id: 'PAC2',lat: 30, lon: -150,neighbors: ['PAC1', 'NA5'] },
-
-    { id: 'SA1', lat: 0,  lon: -40, neighbors: ['NA4', 'SA2'] },
-    { id: 'SA2', lat: -30,lon: -30, neighbors: ['SA1', 'AF1'] },
-    { id: 'AF1', lat: -30,lon: 10,  neighbors: ['SA2', 'IO2'] },
-
-    { id: 'AUS1',lat: -20,lon: 120, neighbors: ['IO2', 'PAC1'] }
-  ];
-
-  const seaNodeById = {};
-  seaNodes.forEach(n => {
-    n.coords = latLonToPoint(n.lat, n.lon);
-    seaNodeById[n.id] = n;
-  });
-
-  function distance(a, b) {
-    const dx = a[0] - b[0];
-    const dy = a[1] - b[1];
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  function findNearestSeaNode(coord) {
-    let best = null;
-    let bestDist = Infinity;
-    seaNodes.forEach(node => {
-      const d = distance(coord, node.coords);
-      if (d < bestDist) {
-        bestDist = d;
-        best = node;
-      }
-    });
-    return best;
-  }
-
-  function findSeaRoute(startNode, endNode) {
-    const openSet = new Set([startNode.id]);
-    const cameFrom = {};
-    const gScore = {};
-    const fScore = {};
-
-    seaNodes.forEach(n => {
-      gScore[n.id] = Infinity;
-      fScore[n.id] = Infinity;
-    });
-
-    gScore[startNode.id] = 0;
-    fScore[startNode.id] = distance(startNode.coords, endNode.coords);
-
-    function lowestF() {
-      let best = null;
-      let bestVal = Infinity;
-      openSet.forEach(id => {
-        if (fScore[id] < bestVal) {
-          bestVal = fScore[id];
-          best = id;
-        }
-      });
-      return best;
-    }
-
-    while (openSet.size) {
-      const currentId = lowestF();
-      if (currentId === endNode.id) {
-        const path = [];
-        let cur = currentId;
-        while (cur) {
-          path.unshift(seaNodeById[cur]);
-          cur = cameFrom[cur];
-        }
-        return path;
-      }
-
-      openSet.delete(currentId);
-      const current = seaNodeById[currentId];
-
-      current.neighbors.forEach(nid => {
-        const neighbor = seaNodeById[nid];
-        const tentative = gScore[currentId] + distance(current.coords, neighbor.coords);
-        if (tentative < gScore[nid]) {
-          cameFrom[nid] = currentId;
-          gScore[nid] = tentative;
-          fScore[nid] = tentative + distance(neighbor.coords, endNode.coords);
-          openSet.add(nid);
-        }
-      });
-    }
-    return null;
-  }
+  const routeData = {
+    'Amsterdam-London': [
+        ports.find(p => p.name === 'Amsterdam').pos,
+        ports.find(p => p.name === 'London').pos
+    ],
+    'Amsterdam-New York': [
+     ports.find(p => p.name === 'Amsterdam').pos,
+     mcToPoint(-2000, -1000), // Een tussenpunt op de Atlantische Oceaan
+     ports.find(p => p.name === 'New York').pos
+    ],
+    // Voeg hier meer combinaties toe...
+  };
 
   /* =========================
-     PORT INTERACTION
+     4. LOGICA & INTERACTIE
      ========================= */
-
-  const portMarkers = {};
   let selectedPorts = [];
-  let routeLine = null;
+  let currentRouteLayer = null;
+
+  const anchorIcon = L.icon({
+    iconUrl: './assets/anchor.png',
+    iconSize:,
+    iconAnchor:
+  });
 
   ports.forEach(port => {
-    const marker = L.marker(port.coords, {
-      icon: createPortIcon(false),
-      title: port.name
-    }).addTo(map);
-
-    portMarkers[port.name] = marker;
-    marker.on('click', () => handlePortClick(port));
+    const marker = L.marker(port.pos, { icon: anchorIcon }).addTo(map);
+    marker.bindTooltip(port.name, { permanent: false, direction: 'top' });
+    marker.on('click', () => {
+      if (selectedPorts.includes(port)) return;
+      selectedPorts.push(port);
+      if (selectedPorts.length > 2) selectedPorts.shift();
+      if (selectedPorts.length === 2) {
+        drawRoute(selectedPorts.name, selectedPorts.name);
+      }
+    });
   });
 
-  function updatePortIcons() {
-    ports.forEach(port => {
-      const selected = selectedPorts.some(p => p.name === port.name);
-      portMarkers[port.name].setIcon(createPortIcon(selected));
-    });
-  }
-
-  function handlePortClick(port) {
-    if (selectedPorts.some(p => p.name === port.name)) return;
-    selectedPorts.push(port);
-    if (selectedPorts.length > 2) selectedPorts.shift();
-    updatePortIcons();
-    updateRoute();
-  }
-
-  function updateRoute() {
-    if (routeLine) {
-      map.removeLayer(routeLine);
-      routeLine = null;
+  function drawRoute(p1, p2) {
+    if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+    const path = routeData[`${p1}-${p2}`] || routeData[`${p2}-${p1}`];
+    if (path) {
+      currentRouteLayer = L.polyline(path, {
+        color: '#00e5ff',
+        weight: 4,
+        dashArray: '5, 10'
+      }).addTo(map);
+      map.fitBounds(currentRouteLayer.getBounds(), { padding: });
+    } else {
+      console.log(`Geen route gevonden voor ${p1} naar ${p2}`);
     }
-
-    if (selectedPorts.length < 2) return;
-
-    const start = selectedPorts[0];
-    const end = selectedPorts[1];
-
-    const seaPath = findSeaRoute(
-      findNearestSeaNode(start.coords),
-      findNearestSeaNode(end.coords)
-    );
-
-    if (!seaPath) return;
-
-    const coords = [start.coords, ...seaPath.map(n => n.coords), end.coords];
-
-    routeLine = L.polyline(coords, {
-      color: '#00bcd4',
-      weight: 4,
-      opacity: 0.9
-    }).addTo(map);
-
-    map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
   }
-</script>
 
+  /* =========================
+     5. DEBUG HULP
+     ========================= */
+  map.on('click', function(e) {
+    console.log(`Geklikte pixel locatie: [${Math.round(e.latlng.lat)}, ${Math.round(e.latlng.lng)}]`);
+  });
+</script>
 </body>
 </html>
