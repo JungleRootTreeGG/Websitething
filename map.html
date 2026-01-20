@@ -68,12 +68,12 @@ const routes=[
       [invertY(102), 503]   // London
     ]
   },
-   {
+  {
     from:'Miami',
     to:'Konigsberg',
     coords:[
       [invertY(171), 273],  // Miami
-      [invertY(102), 503],   // London
+      [invertY(102), 503],  // London
       [invertY(93), 520],
       [invertY(84), 528],
       [invertY(93), 538],
@@ -142,25 +142,20 @@ function updateRoute(){
   // -------------------------
   // Build list of ports along the route
   // -------------------------
-  let portsAlongRoute = [];
+  let portsAlongRoute = [start];
 
-  // Include start port
-  portsAlongRoute.push(start);
-
-  // Add any ports that are in between start and end on the polyline
   ports.forEach(p => {
     if(p.name !== start && p.name !== end){
-      // Check if port coordinates are exactly on the route polyline coords
+      // If port coords are on the route coords, include as intermediate
       const match = route.coords.some(c => c[0] === p.coords[0] && c[1] === p.coords[1]);
       if(match) portsAlongRoute.push(p.name);
     }
   });
 
-  // Include end port
   portsAlongRoute.push(end);
 
   // -------------------------
-  // Send route info to parent
+  // Send route info to parent iframe
   // -------------------------
   window.parent.postMessage({
     startPort: start,
