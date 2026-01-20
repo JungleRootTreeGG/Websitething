@@ -1,189 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Earth Shipping Routes (Water-only, Intermediate Ports)</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    crossorigin=""
-  />
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
-      background: #050814;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    #map { height: 100vh; width: 100vw; }
-    .leaflet-container { background: #000; }
-  </style>
+<meta charset="UTF-8">
+<title>Miami → London Route</title>
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  crossorigin=""
+/>
+<style>
+  html, body { margin:0; padding:0; height:100%; width:100%; }
+  #map { height:100vh; width:100vw; }
+  .leaflet-container { background:#000; }
+</style>
 </head>
 <body>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-/* =========================
-   MAP CONFIGURATION
-========================= */
 const IMG_URL = 'https://i.postimg.cc/YSDwq0ms/map.webp';
 const IMG_WIDTH = 1005;
 const IMG_HEIGHT = 500;
-
-const map = L.map('map', {
-  crs: L.CRS.Simple,
-  minZoom: -2,
-  maxZoom: 2
-});
-
-const bounds = [[0,0],[IMG_HEIGHT, IMG_WIDTH]];
+const map = L.map('map',{crs:L.CRS.Simple, minZoom:-2, maxZoom:2});
+const bounds=[[0,0],[IMG_HEIGHT,IMG_WIDTH]];
 L.imageOverlay(IMG_URL, bounds).addTo(map);
 map.fitBounds(bounds);
 
-/* =========================
-   HELPER TO INVERT Y
-========================= */
-function invertY(y) { return IMG_HEIGHT - y; }
+function invertY(y){ return IMG_HEIGHT - y; }
 
-/* =========================
-   PORT ICON
-========================= */
-function createPortIcon(selected=false) {
-  return L.icon({
-    iconUrl: 'https://i.postimg.cc/wMs4zThh/anchor.png',
-    iconSize: selected ? [48,48] : [42,42],
-    iconAnchor: [24,24]
-  });
+function createPortIcon(selected=false){
+  return L.icon({ iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
+    iconSize: selected?[48,48]:[42,42],
+    iconAnchor:[24,24] });
 }
 
-/* =========================
-   PORT DATA
-========================= */
-const ports = [
-  { name: 'London', coords: [invertY(102), 503] },
-  { name: 'Konigsberg', coords: [invertY(97), 560] },
-  { name: 'Miami', coords: [invertY(171), 273] },
-  // Add more ports as needed
+/* Ports */
+const ports=[
+  { name:'Miami', coords:[invertY(171), 273] },
+  { name:'London', coords:[invertY(102), 503] }
 ];
 
-/* =========================
-   SEA NODES (WATER ONLY)
-========================= */
-const seaNodes = [
-  // North Atlantic
-  { id: 'NA1', coords: [invertY(150), 200], neighbors: ['NA2','NA3'] },
-  { id: 'NA2', coords: [invertY(130), 300], neighbors: ['NA1','NA4'] },
-  { id: 'NA3', coords: [invertY(180), 350], neighbors: ['NA1','NA5'] },
-  { id: 'NA4', coords: [invertY(120), 400], neighbors: ['NA2'] },
-  { id: 'NA5', coords: [invertY(170), 450], neighbors: ['NA3'] },
-
-  // Europe
-  { id: 'EU1', coords: [invertY(100), 500], neighbors: ['NA5','EU2'] },
-  { id: 'EU2', coords: [invertY(90), 550], neighbors: ['EU1','EU3'] },
-  { id: 'EU3', coords: [invertY(85), 580], neighbors: ['EU2'] },
-
-  // Caribbean / Florida
-  { id: 'FL1', coords: [invertY(180), 260], neighbors: ['NA3','FL2'] },
-  { id: 'FL2', coords: [invertY(175), 280], neighbors: ['FL1'] },
-
-  // Add more nodes along water paths as needed
-];
-
-const seaNodeById = {};
-seaNodes.forEach(n=>{ seaNodeById[n.id] = n; });
-
-/* =========================
-   HELPER FUNCTIONS
-========================= */
-function distance(a,b){
-  const dx = a[1]-b[1];
-  const dy = a[0]-b[0];
-  return Math.sqrt(dx*dx+dy*dy);
-}
-
-// A* pathfinding
-function findSeaRoute(startNode, endNode){
-  const openSet = new Set([startNode.id]);
-  const cameFrom = {};
-  const gScore = {};
-  const fScore = {};
-
-  seaNodes.forEach(n=>{ gScore[n.id]=Infinity; fScore[n.id]=Infinity; });
-  gScore[startNode.id] = 0;
-  fScore[startNode.id] = distance(startNode.coords,endNode.coords);
-
-  function lowestF(){
-    let best = null, bestVal = Infinity;
-    openSet.forEach(id=>{ if(fScore[id]<bestVal){ bestVal=fScore[id]; best=id; } });
-    return best;
-  }
-
-  while(openSet.size){
-    const currentId = lowestF();
-    if(currentId === endNode.id){
-      const path = [];
-      let cur = currentId;
-      while(cur){ path.unshift(seaNodeById[cur]); cur = cameFrom[cur]; }
-      return path;
-    }
-
-    openSet.delete(currentId);
-    const current = seaNodeById[currentId];
-
-    current.neighbors.forEach(nid=>{
-      const neighbor = seaNodeById[nid];
-      const tentative = gScore[currentId]+distance(current.coords,neighbor.coords);
-      if(tentative<gScore[nid]){
-        cameFrom[nid]=currentId;
-        gScore[nid]=tentative;
-        fScore[nid]=tentative+distance(neighbor.coords,endNode.coords);
-        openSet.add(nid);
-      }
-    });
-  }
-  return null;
-}
-
-// Check if a port lies along a line segment
-function isPortNearSegment(port, a, b, threshold=20){
-  const x0=port.coords[1], y0=port.coords[0];
-  const x1=a[1], y1=a[0];
-  const x2=b[1], y2=b[0];
-  const A = x0-x1, B = y0-y1;
-  const C = x2-x1, D = y2-y1;
-  const dot = A*C + B*D;
-  const len_sq = C*C+D*D;
-  const param = len_sq!==0?dot/len_sq: -1;
-  let xx,yy;
-  if(param<0){ xx=x1; yy=y1; }
-  else if(param>1){ xx=x2; yy=y2; }
-  else{ xx=x1+param*C; yy=y1+param*D; }
-  const dx = x0-xx, dy = y0-yy;
-  return Math.sqrt(dx*dx+dy*dy)<=threshold;
-}
-
-/* =========================
-   PORT INTERACTION
-========================= */
-const portMarkers = {};
-let selectedPorts = [];
-let routeLine = null;
+const portMarkers={};
+let selectedPorts=[];
+let routeLine=null;
 
 ports.forEach(port=>{
-  const marker = L.marker(port.coords,{ icon:createPortIcon(false), title:port.name }).addTo(map);
-  portMarkers[port.name] = marker;
+  const marker=L.marker(port.coords,{icon:createPortIcon(false), title:port.name}).addTo(map);
+  portMarkers[port.name]=marker;
   marker.on('click',()=>handlePortClick(port));
 });
 
 function updatePortIcons(){
   ports.forEach(port=>{
-    const selected = selectedPorts.some(p=>p.name===port.name);
+    const selected=selectedPorts.some(p=>p.name===port.name);
     portMarkers[port.name].setIcon(createPortIcon(selected));
   });
 }
+
+/* Pre-drawn route layers */
+const routes=[
+  {
+    from:'Miami',
+    to:'London',
+    coords:[
+      [invertY(171), 273],  // Miami
+      [invertY(102), 503]   // London
+    ]
+  }
+];
 
 function handlePortClick(port){
   if(selectedPorts.some(p=>p.name===port.name)) return;
@@ -197,49 +82,17 @@ function updateRoute(){
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
   if(selectedPorts.length<2) return;
 
-  const start = selectedPorts[0], end = selectedPorts[1];
-  const seaPath = findSeaRoute(findNearestSeaNode(start.coords), findNearestSeaNode(end.coords));
-  if(!seaPath) return;
+  const start=selectedPorts[0].name;
+  const end=selectedPorts[1].name;
 
-  // Convert path to coordinates
-  let coords = [start.coords, ...seaPath.map(n=>n.coords), end.coords];
+  const route=routes.find(r=>
+    (r.from===start && r.to===end)||(r.from===end && r.to===start)
+  );
 
-  // Check for intermediate ports along path
-  const intermediatePorts = [];
-  ports.forEach(port=>{
-    if(port===start||port===end) return;
-    for(let i=0;i<coords.length-1;i++){
-      if(isPortNearSegment(port, coords[i], coords[i+1])){
-        intermediatePorts.push(port);
-        break;
-      }
-    }
-  });
+  if(!route) return;
 
-  // Insert intermediate ports in order
-  intermediatePorts.forEach(port=>{
-    // Find closest segment
-    let minDist = Infinity, insertIndex = 1;
-    for(let i=0;i<coords.length-1;i++){
-      const a = coords[i], b = coords[i+1];
-      const dx=port.coords[1]-((a[1]+b[1])/2), dy=port.coords[0]-((a[0]+b[0])/2);
-      const d=Math.sqrt(dx*dx+dy*dy);
-      if(d<minDist){ minDist=d; insertIndex=i+1; }
-    }
-    coords.splice(insertIndex,0,port.coords);
-  });
-
-  routeLine = L.polyline(coords, { color:'#00bcd4', weight:4, opacity:0.9 }).addTo(map);
+  routeLine=L.polyline(route.coords,{color:'#00bcd4',weight:4,opacity:0.9}).addTo(map);
   map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
-}
-
-function findNearestSeaNode(coord){
-  let best = null, bestDist = Infinity;
-  seaNodes.forEach(node=>{
-    const d = distance(coord, node.coords);
-    if(d<bestDist){ bestDist=d; best=node; }
-  });
-  return best;
 }
 </script>
 </body>
