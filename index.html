@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Miami → London Route</title>
+<title>Earth Shipping Routes - Manual Routes</title>
 <link
   rel="stylesheet"
   href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -19,32 +19,76 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
+/* =========================
+   MAP CONFIGURATION
+========================= */
 const IMG_URL = 'https://i.postimg.cc/YSDwq0ms/map.webp';
 const IMG_WIDTH = 1005;
 const IMG_HEIGHT = 500;
+
 const map = L.map('map',{crs:L.CRS.Simple, minZoom:-2, maxZoom:2});
 const bounds=[[0,0],[IMG_HEIGHT,IMG_WIDTH]];
 L.imageOverlay(IMG_URL, bounds).addTo(map);
 map.fitBounds(bounds);
 
+/* =========================
+   HELPER TO INVERT Y
+========================= */
 function invertY(y){ return IMG_HEIGHT - y; }
 
+/* =========================
+   PORT ICON
+========================= */
 function createPortIcon(selected=false){
-  return L.icon({ iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
+  return L.icon({ 
+    iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
     iconSize: selected?[48,48]:[42,42],
-    iconAnchor:[24,24] });
+    iconAnchor:[24,24]
+  });
 }
 
-/* Ports */
+/* =========================
+   PORT DATA
+========================= */
 const ports=[
   { name:'Miami', coords:[invertY(171), 273] },
-  { name:'London', coords:[invertY(102), 503] }
+  { name:'London', coords:[invertY(102), 503] },
+  { name:'Konigsberg', coords:[invertY(97), 560] }
 ];
 
+/* =========================
+   PRE-DEFINED ROUTES
+========================= */
+const routes=[
+  {
+    from:'Miami',
+    to:'London',
+    coords:[
+      [invertY(171), 273],  // Miami
+      [invertY(102), 503]   // London
+    ]
+  },
+  {
+    from:'London',
+    to:'Konigsberg',
+    coords:[
+      [invertY(102), 503],  // London
+      [invertY(93), 520],
+      [invertY(84), 531],
+      [invertY(93), 538],
+      [invertY(97), 560]    // Konigsberg
+    ]
+  }
+];
+
+/* =========================
+   PORT INTERACTION
+========================= */
 const portMarkers={};
 let selectedPorts=[];
 let routeLine=null;
 
+// Add markers for ports
 ports.forEach(port=>{
   const marker=L.marker(port.coords,{icon:createPortIcon(false), title:port.name}).addTo(map);
   portMarkers[port.name]=marker;
@@ -58,22 +102,10 @@ function updatePortIcons(){
   });
 }
 
-/* Pre-drawn route layers */
-const routes=[
-  {
-    from:'Miami',
-    to:'London',
-    coords:[
-      [invertY(171), 273],  // Miami
-      [invertY(102), 503]   // London
-    ]
-  }
-];
-
 function handlePortClick(port){
   if(selectedPorts.some(p=>p.name===port.name)) return;
   selectedPorts.push(port);
-  if(selectedPorts.length>2) selectedPorts.shift();
+  if(selectedPorts.length>2) selectedPorts.shift(); // only keep last 2 clicks
   updatePortIcons();
   updateRoute();
 }
@@ -85,13 +117,14 @@ function updateRoute(){
   const start=selectedPorts[0].name;
   const end=selectedPorts[1].name;
 
+  // Find pre-defined route (both directions)
   const route=routes.find(r=>
-    (r.from===start && r.to===end)||(r.from===end && r.to===start)
+    (r.from===start && r.to===end) || (r.from===end && r.to===start)
   );
 
-  if(!route) return;
+  if(!route) return; // No route defined
 
-  routeLine=L.polyline(route.coords,{color:'#00bcd4',weight:4,opacity:0.9}).addTo(map);
+  routeLine=L.polyline(route.coords,{color:'#00bcd4', weight:4, opacity:0.9}).addTo(map);
   map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
 }
 </script>
