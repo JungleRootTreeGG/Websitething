@@ -38,6 +38,13 @@ iframe {
   border: 1px solid #ccc;
 }
 
+.order-section form small {
+  display:block;
+  font-size: 0.9em;
+  color:#555;
+  margin-bottom:10px;
+}
+
 .order-section form button {
   margin-top: 15px;
   padding: 10px 20px;
@@ -81,15 +88,22 @@ iframe {
 
     <label>Container Type:
       <select id="containerType">
-        <option>Standard</option>
-        <option>Refrigerated</option>
-        <option>Hazardous</option>
+        <option value="Civilian">Civilian</option>
+        <option value="Military">Military</option>
       </select>
     </label>
 
-    <label>Container Number:
-      <input type="text" id="containerNumber">
+    <!-- Hidden field for nation if Military -->
+    <div id="militaryNationContainer" style="display:none; margin-bottom:10px;">
+      <label>Nation:
+        <input type="text" id="militaryNation" placeholder="Enter your nation">
+      </label>
+    </div>
+
+    <label>Container Number (Format: 3 capital letters + 4 digits, e.g., UAE 1234):
+      <input type="text" id="containerNumber" placeholder="UAE 1234" required pattern="[A-Z]{3} \d{4}">
     </label>
+    <small>Must be 3 capital letters followed by 4 digits (e.g., UAE 1234)</small>
 
     <label>Total Price ($):
       <input type="text" id="totalPrice" readonly>
@@ -102,6 +116,18 @@ iframe {
 <script>
 const perStopFee = 1000;
 let routePortNames = [];
+
+// Show/hide military nation field
+const containerTypeSelect = document.getElementById('containerType');
+const militaryNationContainer = document.getElementById('militaryNationContainer');
+
+containerTypeSelect.addEventListener('change', () => {
+  if(containerTypeSelect.value === "Military"){
+    militaryNationContainer.style.display = "block";
+  } else {
+    militaryNationContainer.style.display = "none";
+  }
+});
 
 // Listen for messages from the map iframe
 window.addEventListener('message', (event) => {
@@ -123,10 +149,67 @@ function calculatePrice(){
 
 document.getElementById('cargoValue').addEventListener('input', calculatePrice);
 
-// Optional form submit
-document.getElementById('orderForm').addEventListener('submit', (e)=>{
+// Handle form submission to Discord webhook
+document.getElementById('orderForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
-  alert(`Order submitted!\nFrom: ${document.getElementById('fromPort').value}\nTo: ${document.getElementById('toPort').value}\nTotal Price: $${document.getElementById('totalPrice').value}`);
+
+  const containerNumber = document.getElementById('containerNumber').value.trim();
+  const regex = /^[A-Z]{3} \d{4}$/;
+
+  if(!regex.test(containerNumber)){
+    alert("Container number is invalid! Must be 3 capital letters followed by 4 digits (e.g., UAE 1234).");
+    return;
+  }
+
+  if(routePortNames.length === 0){
+    alert("Please select a route on the map first!");
+    return;
+  }
+
+  const orderData = {
+    fromPort: document.getElementById('fromPort').value,
+    toPort: document.getElementById('toPort').value,
+    discord: document.getElementById('discord').value,
+    ingame: document.getElementById('ingame').value,
+    cargoValue: parseFloat(document.getElementById('cargoValue').value),
+    containerType: containerTypeSelect.value,
+    containerNumber: containerNumber,
+    totalPrice: parseFloat(document.getElementById('totalPrice').value),
+    portsAlongRoute: routePortNames,
+    nation: containerTypeSelect.value === "Military" ? document.getElementById('militaryNation').value : null
+  };
+
+  // Replace with your actual Discord webhook URL
+  const webhookURL = "YOUR_DISCORD_WEBHOOK_URL";
+
+  let content = `📦 **New Shipping Order**
+**From:** ${orderData.fromPort}
+**To:** ${orderData.toPort}
+**Discord:** ${orderData.discord}
+**In-game Username:** ${orderData.ingame}
+**Cargo Value:** $${orderData.cargoValue.toFixed(2)}
+**Container:** ${orderData.containerType} (#${orderData.containerNumber})`;
+
+  if(orderData.nation) content += `\n**Nation:** ${orderData.nation}`;
+
+  content += `\n**Stops:** ${orderData.portsAlongRoute.join(' → ')}
+**Total Price:** $${orderData.totalPrice.toFixed(2)}`;
+
+  try {
+    const response = await fetch(webhookURL, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ content })
+    });
+    if(response.ok){
+      alert('Order sent to Discord successfully!');
+    } else {
+      alert('Failed to send order to Discord.');
+    }
+  } catch(err){
+    console.error(err);
+    alert('Network error. Could not send order.');
+  }
 });
 </script>
 
