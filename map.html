@@ -126,35 +126,47 @@ function updateRoute(){
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
   if(selectedPorts.length<2) return;
 
-  const start=selectedPorts[0].name;
-  const end=selectedPorts[1].name;
+  const start = selectedPorts[0].name;
+  const end = selectedPorts[1].name;
 
   // Find pre-defined route (both directions)
-  const route=routes.find(r=>
-    (r.from===start && r.to===end) || (r.from===end && r.to===start)
+  const route = routes.find(r =>
+    (r.from === start && r.to === end) || (r.from === end && r.to === start)
   );
 
   if(!route) return; // No route defined
 
-  routeLine=L.polyline(route.coords,{color:'#00bcd4', weight:4, opacity:0.9}).addTo(map);
+  routeLine = L.polyline(route.coords,{color:'#00bcd4', weight:4, opacity:0.9}).addTo(map);
   map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
-  // Build the list of ports along the route (including start and end)
-let portsAlongRoute = [start.name];
 
-// If getRouteCoords returns multiple segments through intermediate ports, include them
-// (assuming getRouteCoords returns coords, you should also track the port names along the path)
-if(selectedPorts.length === 2) {
-    // Example: if you already track intermediate ports in your route chaining:
-    const route = findRoutePortNames(start.name, end.name); // you would implement this function
-    portsAlongRoute = route; // this should be an array like ['Miami', 'London', 'Konigsberg']
-}
+  // -------------------------
+  // Build list of ports along the route
+  // -------------------------
+  let portsAlongRoute = [];
 
-// Send the route info to the parent iframe
-window.parent.postMessage({
-    startPort: start.name,
-    endPort: end.name,
+  // Include start port
+  portsAlongRoute.push(start);
+
+  // Add any ports that are in between start and end on the polyline
+  ports.forEach(p => {
+    if(p.name !== start && p.name !== end){
+      // Check if port coordinates are exactly on the route polyline coords
+      const match = route.coords.some(c => c[0] === p.coords[0] && c[1] === p.coords[1]);
+      if(match) portsAlongRoute.push(p.name);
+    }
+  });
+
+  // Include end port
+  portsAlongRoute.push(end);
+
+  // -------------------------
+  // Send route info to parent
+  // -------------------------
+  window.parent.postMessage({
+    startPort: start,
+    endPort: end,
     portsAlongRoute: portsAlongRoute
-}, '*');
+  }, '*');
 }
 </script>
 </body>
