@@ -2,32 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SMC Shipping Routes - Map</title>
+<title>SMC Shipping Routes - Auto Routes</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <style>
-html, body { margin:0; padding:0; height:100%; width:100%; }
-#map { width: 100%; height: 100%; }
-.leaflet-container { background:#000; }
-
-/* Port label styling */
-.port-label {
-  color: #fff;
-  font-weight: bold;
-  font-size: 12px;
-  text-shadow: 1px 1px 2px #000;
-  pointer-events: none;
-}
+  html, body { margin:0; padding:0; }
+  #map { width:1005px; height:500px; margin:0 auto; }
+  .leaflet-container { background:#000; }
+  .port-label {
+    color:#fff;
+    font-weight:bold;
+    font-size:12px;
+    text-shadow:1px 1px 2px #000;
+    pointer-events:none;
+  }
 </style>
 </head>
 <body>
 <div id="map"></div>
 
+<canvas id="mapCanvas" width="1005" height="500" style="display:none;"></canvas>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-// =========================
-// CONFIGURATION
-// =========================
-const IMG_URL = 'https://i.postimg.cc/YSDwq0ms/map.webp';
+const IMG_URL = 'https://i.postimg.cc/3xRtYPkG/map-Nero-AI-Image-Upscaler-Photo-Face.webp';
 const IMG_WIDTH = 1005;
 const IMG_HEIGHT = 500;
 
@@ -46,59 +43,92 @@ function createPortIcon(selected=false){
   });
 }
 
-// =========================
-// PORT DATA (with Minecraft coords for calibration)
-// =========================
-const MC_A = { x:-10936, z:-3646, px:277, py:174 }; // Miami
-const MC_B = { x:13,     z:-7030, px:503, py:102 }; // London
+// ------------------ PORTS ------------------
+const ports=[
+  { name:'Miami', coords:[invertY(174), 277] },
+  { name:'London', coords:[invertY(102), 503] },
+  { name:'Konigsberg', coords:[invertY(93), 558] }
+];
 
-const scaleX = (MC_B.px - MC_A.px) / (MC_B.x - MC_A.x);
-const scaleY = (MC_B.py - MC_A.py) / (MC_B.z - MC_A.z);
+const portMarkers={};
+let selectedPorts=[];
+let routeLine=null;
 
-function mcToPixel(x,z){
-  const px = MC_A.px + (x - MC_A.x) * scaleX;
-  const py = MC_A.py + (z - MC_A.z) * scaleY;
-  return [invertY(py), px];
+// ------------------ LOAD PIXEL DATA ------------------
+const canvas = document.getElementById('mapCanvas');
+const ctx = canvas.getContext('2d');
+const img = new Image();
+img.crossOrigin = "anonymous";
+img.src = IMG_URL;
+
+let imageData;
+
+img.onload = ()=>{
+  ctx.drawImage(img,0,0,IMG_WIDTH,IMG_HEIGHT);
+  imageData = ctx.getImageData(0,0,IMG_WIDTH,IMG_HEIGHT).data;
+};
+
+// ------------------ WATER CHECK ------------------
+function isWater(y,x){
+  if(!imageData) return false;
+  if(x<0||y<0||x>=IMG_WIDTH||y>=IMG_HEIGHT) return false;
+  const idx = (y*IMG_WIDTH + x)*4;
+  const r = imageData[idx];
+  const g = imageData[idx+1];
+  const b = imageData[idx+2];
+  // any blue dominant pixel is considered water
+  return (b > 100 && b > r+30 && b > g+30);
 }
 
-// Define ports using Minecraft coords, will auto-convert to pixels
-const ports = [
-  { name:'Miami', coords: mcToPixel(-10936,-3646) },
-  { name:'London', coords: mcToPixel(13,-7030) },
-  { name:'Konigsberg', coords: mcToPixel(2787,-7485) }
-];
+// ------------------ PATHFINDING ------------------
+function findPath(start,end){
+  const queue = [[...start]];
+  const visited = new Set();
+  visited.add(start.join(','));
+  const prev = {};
 
-// =========================
-// PREDEFINED ROUTES (pixels) - you can regenerate with auto-routing later
-// =========================
-const routes = [
-  { from:'Miami', to:'London', coords:[ports[0].coords, ports[1].coords] },
-  { from:'Miami', to:'Konigsberg', coords:[ports[0].coords, ports[1].coords, [invertY(93),520],[invertY(84),528],[invertY(93),538],ports[2].coords] },
-  { from:'London', to:'Konigsberg', coords:[ports[1].coords, [invertY(93),520],[invertY(84),528],[invertY(93),538],ports[2].coords] }
-];
+  const directions = [
+    [0,1],[1,0],[0,-1],[-1,0]  // right, down, left, up
+  ];
 
-// =========================
-// PORT INTERACTIONS
-// =========================
-const portMarkers = {};
-let selectedPorts = [];
-let routeLine = null;
+  while(queue.length){
+    const [cy,cx] = queue.shift();
+    if(cy===end[0] && cx===end[1]){
+      // reconstruct path
+      const path = [];
+      let key = cy+','+cx;
+      while(key){
+        path.unshift(prev[key]||[cy,cx]);
+        key = prev[key] ? prev[key].join(',') : null;
+      }
+      return path;
+    }
 
-ports.forEach(port => {
-  // Anchor marker
+    for(const [dy,dx] of directions){
+      const ny = cy+dy;
+      const nx = cx+dx;
+      const nkey = ny+','+nx;
+      if(!visited.has(nkey) && isWater(ny,nx)){
+        queue.push([ny,nx]);
+        visited.add(nkey);
+        prev[nkey] = [cy,cx];
+      }
+    }
+  }
+  return null; // no path
+}
+
+// ------------------ PORT MARKERS ------------------
+ports.forEach(port=>{
   const marker = L.marker(port.coords,{icon:createPortIcon(false), title:port.name}).addTo(map);
-  portMarkers[port.name] = marker;
+  portMarkers[port.name]=marker;
 
-  // Label marker (separate icon)
+  // label
   L.marker(port.coords,{
-    icon:L.divIcon({
-      className:'port-label',
-      html:port.name,
-      iconAnchor:[-10,-16]
-    })
+    icon:L.divIcon({className:'port-label', html:port.name, iconAnchor:[-10,-16]})
   }).addTo(map);
 
-  marker.on('click', ()=>handlePortClick(port));
+  marker.on('click',()=>handlePortClick(port));
 });
 
 function updatePortIcons(){
@@ -116,8 +146,8 @@ function handlePortClick(port){
   updateRoute();
 }
 
-// Deselect by clicking on empty map
-map.on('click', e=>{
+// deselect ports on empty map click
+map.on('click',e=>{
   const clickedOnPort = ports.some(p=>{
     const dx = e.latlng.lat - p.coords[0];
     const dy = e.latlng.lng - p.coords[1];
@@ -131,32 +161,35 @@ map.on('click', e=>{
   }
 });
 
-// =========================
-// UPDATE ROUTE
-// =========================
+// ------------------ UPDATE ROUTE ------------------
 function updateRoute(){
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
-  if(selectedPorts.length<2) return;
+  if(selectedPorts.length<2 || !imageData) return;
 
-  const start = selectedPorts[0].name;
-  const end = selectedPorts[1].name;
+  const start = selectedPorts[0].coords.map(v=>Math.round(v));
+  const end = selectedPorts[1].coords.map(v=>Math.round(v));
 
-  const route = routes.find(r=>(r.from===start && r.to===end)||(r.from===end && r.to===start));
-  if(!route) return;
+  const path = findPath(start,end);
+  if(!path) return;
 
-  routeLine = L.polyline(route.coords,{color:'#00bcd4',weight:4,opacity:0.9}).addTo(map);
+  routeLine = L.polyline(path,{color:'#00bcd4',weight:4,opacity:0.9}).addTo(map);
+
   map.fitBounds(routeLine.getBounds(),{padding:[40,40]});
 
-  let portsAlongRoute = [start];
-  ports.forEach(p=>{
-    if(p.name!==start && p.name!==end){
-      const match = route.coords.some(c=>c[0]===p.coords[0] && c[1]===p.coords[1]);
-      if(match) portsAlongRoute.push(p.name);
-    }
+  // determine ports along path
+  const portsAlongRoute=[selectedPorts[0].name];
+  path.forEach(p=>{
+    ports.forEach(port=>{
+      if(port.name!==selectedPorts[0].name && port.name!==selectedPorts[1].name){
+        if(Math.abs(port.coords[0]-p[0])<2 && Math.abs(port.coords[1]-p[1])<2){
+          if(!portsAlongRoute.includes(port.name)) portsAlongRoute.push(port.name);
+        }
+      }
+    });
   });
-  portsAlongRoute.push(end);
+  portsAlongRoute.push(selectedPorts[1].name);
 
-  window.parent.postMessage({ startPort:start, endPort:end, portsAlongRoute }, '*');
+  window.parent.postMessage({ startPort:selectedPorts[0].name, endPort:selectedPorts[1].name, portsAlongRoute }, '*');
 }
 </script>
 </body>
