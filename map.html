@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SMC Shipping Routes - Auto Routes</title>
+<title>SMC Shipping Routes - Manual Routes</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <style>
   html, body { margin:0; padding:0; }
@@ -19,178 +19,16 @@
 </head>
 <body>
 <div id="map"></div>
-
-<canvas id="mapCanvas" width="1005" height="500" style="display:none;"></canvas>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const IMG_URL = 'https://i.postimg.cc/3xRtYPkG/map-Nero-AI-Image-Upscaler-Photo-Face.webp';
-const IMG_WIDTH = 1005;
-const IMG_HEIGHT = 500;
-
-const map = L.map('map', {crs:L.CRS.Simple, minZoom:0, maxZoom:3});
-const bounds = [[0,0],[IMG_HEIGHT,IMG_WIDTH]];
-L.imageOverlay(IMG_URL, bounds).addTo(map);
+const IMG_URL='https://i.postimg.cc/3xRtYPkG/map-Nero-AI-Image-Upscaler-Photo-Face.webp';
+const IMG_WIDTH=1005;
+const IMG_HEIGHT=500;
+const map=L.map('map',{crs:L.CRS.Simple,minZoom:0,maxZoom:3});
+const bounds=[[0,0],[IMG_HEIGHT,IMG_WIDTH]];
+L.imageOverlay(IMG_URL,bounds).addTo(map);
 map.fitBounds(bounds);
-
-function invertY(y){ return IMG_HEIGHT - y; }
-
-function createPortIcon(selected=false){
-  return L.icon({
-    iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
-    iconSize: selected?[36,36]:[32,32],
-    iconAnchor:[16,16]
-  });
-}
-
-// ------------------ PORTS ------------------
-const ports=[
-  { name:'Miami', coords:[invertY(174), 277] },
-  { name:'London', coords:[invertY(102), 503] },
-  { name:'Konigsberg', coords:[invertY(93), 558] }
-];
-
-const portMarkers={};
-let selectedPorts=[];
-let routeLine=null;
-
-// ------------------ LOAD PIXEL DATA ------------------
-const canvas = document.getElementById('mapCanvas');
-const ctx = canvas.getContext('2d');
-const img = new Image();
-img.crossOrigin = "anonymous";
-img.src = IMG_URL;
-
-let imageData;
-
-img.onload = ()=>{
-  ctx.drawImage(img,0,0,IMG_WIDTH,IMG_HEIGHT);
-  imageData = ctx.getImageData(0,0,IMG_WIDTH,IMG_HEIGHT).data;
-};
-
-// ------------------ WATER CHECK ------------------
-function isWater(y,x){
-  if(!imageData) return false;
-  if(x<0||y<0||x>=IMG_WIDTH||y>=IMG_HEIGHT) return false;
-  const idx = (y*IMG_WIDTH + x)*4;
-  const r = imageData[idx];
-  const g = imageData[idx+1];
-  const b = imageData[idx+2];
-  // any blue dominant pixel is considered water
-  return (b > 100 && b > r+30 && b > g+30);
-}
-
-// ------------------ PATHFINDING ------------------
-function findPath(start,end){
-  const queue = [[...start]];
-  const visited = new Set();
-  visited.add(start.join(','));
-  const prev = {};
-
-  const directions = [
-    [0,1],[1,0],[0,-1],[-1,0]  // right, down, left, up
-  ];
-
-  while(queue.length){
-    const [cy,cx] = queue.shift();
-    if(cy===end[0] && cx===end[1]){
-      // reconstruct path
-      const path = [];
-      let key = cy+','+cx;
-      while(key){
-        path.unshift(prev[key]||[cy,cx]);
-        key = prev[key] ? prev[key].join(',') : null;
-      }
-      return path;
-    }
-
-    for(const [dy,dx] of directions){
-      const ny = cy+dy;
-      const nx = cx+dx;
-      const nkey = ny+','+nx;
-      if(!visited.has(nkey) && isWater(ny,nx)){
-        queue.push([ny,nx]);
-        visited.add(nkey);
-        prev[nkey] = [cy,cx];
-      }
-    }
-  }
-  return null; // no path
-}
-
-// ------------------ PORT MARKERS ------------------
-ports.forEach(port=>{
-  const marker = L.marker(port.coords,{icon:createPortIcon(false), title:port.name}).addTo(map);
-  portMarkers[port.name]=marker;
-
-  // label
-  L.marker(port.coords,{
-    icon:L.divIcon({className:'port-label', html:port.name, iconAnchor:[-10,-16]})
-  }).addTo(map);
-
-  marker.on('click',()=>handlePortClick(port));
-});
-
-function updatePortIcons(){
-  ports.forEach(port=>{
-    const selected = selectedPorts.some(p=>p.name===port.name);
-    portMarkers[port.name].setIcon(createPortIcon(selected));
-  });
-}
-
-function handlePortClick(port){
-  if(selectedPorts.some(p=>p.name===port.name)) return;
-  selectedPorts.push(port);
-  if(selectedPorts.length>2) selectedPorts.shift();
-  updatePortIcons();
-  updateRoute();
-}
-
-// deselect ports on empty map click
-map.on('click',e=>{
-  const clickedOnPort = ports.some(p=>{
-    const dx = e.latlng.lat - p.coords[0];
-    const dy = e.latlng.lng - p.coords[1];
-    return Math.sqrt(dx*dx + dy*dy)<5;
-  });
-  if(!clickedOnPort){
-    selectedPorts=[];
-    updatePortIcons();
-    if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
-    window.parent.postMessage({ startPort:null, endPort:null, portsAlongRoute:[] }, '*');
-  }
-});
-
-// ------------------ UPDATE ROUTE ------------------
-function updateRoute(){
-  if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
-  if(selectedPorts.length<2 || !imageData) return;
-
-  const start = selectedPorts[0].coords.map(v=>Math.round(v));
-  const end = selectedPorts[1].coords.map(v=>Math.round(v));
-
-  const path = findPath(start,end);
-  if(!path) return;
-
-  routeLine = L.polyline(path,{color:'#00bcd4',weight:4,opacity:0.9}).addTo(map);
-
-  map.fitBounds(routeLine.getBounds(),{padding:[40,40]});
-
-  // determine ports along path
-  const portsAlongRoute=[selectedPorts[0].name];
-  path.forEach(p=>{
-    ports.forEach(port=>{
-      if(port.name!==selectedPorts[0].name && port.name!==selectedPorts[1].name){
-        if(Math.abs(port.coords[0]-p[0])<2 && Math.abs(port.coords[1]-p[1])<2){
-          if(!portsAlongRoute.includes(port.name)) portsAlongRoute.push(port.name);
-        }
-      }
-    });
-  });
-  portsAlongRoute.push(selectedPorts[1].name);
-
-  window.parent.postMessage({ startPort:selectedPorts[0].name, endPort:selectedPorts[1].name, portsAlongRoute }, '*');
-}
+function invertY(y){return IMG_HEIGHT-y;}
 </script>
 </body>
 </html>
