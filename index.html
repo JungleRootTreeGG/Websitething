@@ -163,7 +163,6 @@ iframe {
 </div>
 
 <script>
-const perStopFee = 1000;
 let routePortNames = [];
 
 const containerTypeSelect = document.getElementById('containerType');
@@ -171,6 +170,7 @@ const militaryNationContainer = document.getElementById('militaryNationContainer
 
 containerTypeSelect.addEventListener('change', () => {
   militaryNationContainer.style.display = containerTypeSelect.value === "Military" ? "block" : "none";
+  calculatePrice(); // recalc price if type changes
 });
 
 window.addEventListener('message', (event) => {
@@ -185,8 +185,9 @@ window.addEventListener('message', (event) => {
 
 function calculatePrice(){
   const cargoValue = parseFloat(document.getElementById('cargoValue').value) || 0;
-  const stops = routePortNames.length || 0;
-  const totalPrice = stops*perStopFee + cargoValue*0.1;
+  const containerType = containerTypeSelect.value;
+  const baseFee = containerType === "Military" ? 2000 : 1000;
+  const totalPrice = baseFee + cargoValue * 0.1;
   document.getElementById('totalPrice').value = totalPrice.toFixed(2);
 }
 
