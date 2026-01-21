@@ -2,197 +2,161 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>SMC Shipping Routes – Auto Sea Routing</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
+<title>SMC Shipping Routes - Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <style>
-html, body { margin:0; padding:0; }
-#map {
-  width: 1005px;
-  height: 500px;
-}
+html, body { margin:0; padding:0; height:100%; width:100%; }
+#map { width: 100%; height: 100%; }
 .leaflet-container { background:#000; }
 
+/* Port label styling */
 .port-label {
-  color:#fff;
-  font-weight:bold;
-  font-size:11px;
-  text-shadow:1px 1px 2px #000;
-  pointer-events:none;
+  color: #fff;
+  font-weight: bold;
+  font-size: 12px;
+  text-shadow: 1px 1px 2px #000;
+  pointer-events: none;
 }
 </style>
 </head>
 <body>
-
 <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-/* =========================
-   MAP CONFIG
-========================= */
-const IMG_URL = 'https://i.postimg.cc/3xRtYPkG/map-Nero-AI-Image-Upscaler-Photo-Face.webp';
-const IMG_W = 1005;
-const IMG_H = 500;
+// =========================
+// CONFIGURATION
+// =========================
+const IMG_URL = 'https://i.postimg.cc/YSDwq0ms/map.webp';
+const IMG_WIDTH = 1005;
+const IMG_HEIGHT = 500;
 
-const map = L.map('map', {
-  crs: L.CRS.Simple,
-  minZoom: 0,
-  maxZoom: 3,
-  zoomControl: false
-});
-
-const bounds = [[0,0],[IMG_H,IMG_W]];
+const map = L.map('map', {crs:L.CRS.Simple, minZoom:0, maxZoom:3});
+const bounds = [[0,0],[IMG_HEIGHT,IMG_WIDTH]];
 L.imageOverlay(IMG_URL, bounds).addTo(map);
 map.fitBounds(bounds);
 
-/* =========================
-   COORD TRANSFORM
-   Minecraft Earth → Pixel
-========================= */
-const MC_BOUNDS = {
-  minX: -10936,
-  maxX: 2787,
-  minZ: -7485,
-  maxZ: -3646
-};
+function invertY(y){ return IMG_HEIGHT - y; }
 
-function mcToPixel(x,z){
-  const px = (x - MC_BOUNDS.minX) / (MC_BOUNDS.maxX - MC_BOUNDS.minX) * IMG_W;
-  const py = (z - MC_BOUNDS.minZ) / (MC_BOUNDS.maxZ - MC_BOUNDS.minZ) * IMG_H;
-  return [IMG_H - py, px];
-}
-
-/* =========================
-   PORT DATA (REAL)
-========================= */
-const ports = [
-  { name:'Miami',       mc:{x:-10936,z:-3646} },
-  { name:'London',      mc:{x:13,z:-7030} },
-  { name:'Konigsberg',  mc:{x:2787,z:-7485} }
-];
-
-ports.forEach(p=>{
-  p.coords = mcToPixel(p.mc.x,p.mc.z);
-});
-
-/* =========================
-   ICONS
-========================= */
-function portIcon(sel){
+function createPortIcon(selected=false){
   return L.icon({
     iconUrl:'https://i.postimg.cc/wMs4zThh/anchor.png',
-    iconSize: sel?[34,34]:[30,30],
-    iconAnchor:[15,15]
+    iconSize: selected?[36,36]:[32,32],
+    iconAnchor:[16,16]
   });
 }
 
-/* =========================
-   SEA GRID
-========================= */
-const GRID = 5; // px per cell
-const cols = Math.floor(IMG_W / GRID);
-const rows = Math.floor(IMG_H / GRID);
-const sea = [];
+// =========================
+// PORT DATA (with Minecraft coords for calibration)
+// =========================
+const MC_A = { x:-10936, z:-3646, px:277, py:174 }; // Miami
+const MC_B = { x:13,     z:-7030, px:503, py:102 }; // London
 
-const img = new Image();
-img.crossOrigin = 'anonymous';
-img.src = IMG_URL;
+const scaleX = (MC_B.px - MC_A.px) / (MC_B.x - MC_A.x);
+const scaleY = (MC_B.py - MC_A.py) / (MC_B.z - MC_A.z);
 
-img.onload = () => {
-  const c = document.createElement('canvas');
-  c.width = IMG_W;
-  c.height = IMG_H;
-  const ctx = c.getContext('2d');
-  ctx.drawImage(img,0,0);
-
-  for(let y=0;y<rows;y++){
-    sea[y]=[];
-    for(let x=0;x<cols;x++){
-      const px = x*GRID;
-      const py = y*GRID;
-      const d = ctx.getImageData(px,py,1,1).data;
-      // blue-ish pixels = water
-      sea[y][x] = d[2] > d[1] && d[2] > d[0];
-    }
-  }
-};
-
-/* =========================
-   A* PATHFINDING (90°)
-========================= */
-function findPath(start,end){
-  const sx = Math.floor(start[1]/GRID);
-  const sy = Math.floor(start[0]/GRID);
-  const ex = Math.floor(end[1]/GRID);
-  const ey = Math.floor(end[0]/GRID);
-
-  const open = [[sx,sy]];
-  const came = {};
-  const key = (x,y)=>x+','+y;
-
-  while(open.length){
-    const [x,y] = open.shift();
-    if(x===ex && y===ey) break;
-
-    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
-      const nx=x+dx, ny=y+dy;
-      if(nx<0||ny<0||nx>=cols||ny>=rows) return;
-      if(!sea[ny][nx]) return;
-      const k = key(nx,ny);
-      if(came[k]) return;
-      came[k] = [x,y];
-      open.push([nx,ny]);
-    });
-  }
-
-  const path=[];
-  let cur=[ex,ey];
-  while(cur){
-    path.push([cur[1]*GRID, cur[0]*GRID]);
-    cur = came[key(cur[0],cur[1])];
-  }
-  return path.reverse();
+function mcToPixel(x,z){
+  const px = MC_A.px + (x - MC_A.x) * scaleX;
+  const py = MC_A.py + (z - MC_A.z) * scaleY;
+  return [invertY(py), px];
 }
 
-/* =========================
-   INTERACTION
-========================= */
-let selected=[], line=null;
+// Define ports using Minecraft coords, will auto-convert to pixels
+const ports = [
+  { name:'Miami', coords: mcToPixel(-10936,-3646) },
+  { name:'London', coords: mcToPixel(13,-7030) },
+  { name:'Konigsberg', coords: mcToPixel(2787,-7485) }
+];
 
-ports.forEach(p=>{
-  const m=L.marker(p.coords,{icon:portIcon(false)}).addTo(map);
-  p.marker=m;
+// =========================
+// PREDEFINED ROUTES (pixels) - you can regenerate with auto-routing later
+// =========================
+const routes = [
+  { from:'Miami', to:'London', coords:[ports[0].coords, ports[1].coords] },
+  { from:'Miami', to:'Konigsberg', coords:[ports[0].coords, ports[1].coords, [invertY(93),520],[invertY(84),528],[invertY(93),538],ports[2].coords] },
+  { from:'London', to:'Konigsberg', coords:[ports[1].coords, [invertY(93),520],[invertY(84),528],[invertY(93),538],ports[2].coords] }
+];
 
-  L.marker(p.coords,{
+// =========================
+// PORT INTERACTIONS
+// =========================
+const portMarkers = {};
+let selectedPorts = [];
+let routeLine = null;
+
+ports.forEach(port => {
+  // Anchor marker
+  const marker = L.marker(port.coords,{icon:createPortIcon(false), title:port.name}).addTo(map);
+  portMarkers[port.name] = marker;
+
+  // Label marker (separate icon)
+  L.marker(port.coords,{
     icon:L.divIcon({
       className:'port-label',
-      html:p.name,
-      iconAnchor:[-10,-14]
+      html:port.name,
+      iconAnchor:[-10,-16]
     })
   }).addTo(map);
 
-  m.on('click',()=>{
-    if(selected.includes(p)) return;
-    selected.push(p);
-    if(selected.length>2) selected.shift();
-    draw();
+  marker.on('click', ()=>handlePortClick(port));
+});
+
+function updatePortIcons(){
+  ports.forEach(port=>{
+    const selected = selectedPorts.some(p=>p.name===port.name);
+    portMarkers[port.name].setIcon(createPortIcon(selected));
   });
+}
+
+function handlePortClick(port){
+  if(selectedPorts.some(p=>p.name===port.name)) return;
+  selectedPorts.push(port);
+  if(selectedPorts.length>2) selectedPorts.shift();
+  updatePortIcons();
+  updateRoute();
+}
+
+// Deselect by clicking on empty map
+map.on('click', e=>{
+  const clickedOnPort = ports.some(p=>{
+    const dx = e.latlng.lat - p.coords[0];
+    const dy = e.latlng.lng - p.coords[1];
+    return Math.sqrt(dx*dx + dy*dy)<5;
+  });
+  if(!clickedOnPort){
+    selectedPorts=[];
+    updatePortIcons();
+    if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+    window.parent.postMessage({ startPort:null, endPort:null, portsAlongRoute:[] }, '*');
+  }
 });
 
-map.on('click',()=>{
-  selected=[];
-  if(line){map.removeLayer(line);line=null;}
-});
+// =========================
+// UPDATE ROUTE
+// =========================
+function updateRoute(){
+  if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+  if(selectedPorts.length<2) return;
 
-function draw(){
-  ports.forEach(p=>p.marker.setIcon(portIcon(selected.includes(p))));
-  if(line){map.removeLayer(line);line=null;}
-  if(selected.length<2) return;
+  const start = selectedPorts[0].name;
+  const end = selectedPorts[1].name;
 
-  const pts=findPath(selected[0].coords,selected[1].coords);
-  line=L.polyline(pts,{color:'#00bcd4',weight:4}).addTo(map);
+  const route = routes.find(r=>(r.from===start && r.to===end)||(r.from===end && r.to===start));
+  if(!route) return;
+
+  routeLine = L.polyline(route.coords,{color:'#00bcd4',weight:4,opacity:0.9}).addTo(map);
+  map.fitBounds(routeLine.getBounds(),{padding:[40,40]});
+
+  let portsAlongRoute = [start];
+  ports.forEach(p=>{
+    if(p.name!==start && p.name!==end){
+      const match = route.coords.some(c=>c[0]===p.coords[0] && c[1]===p.coords[1]);
+      if(match) portsAlongRoute.push(p.name);
+    }
+  });
+  portsAlongRoute.push(end);
+
+  window.parent.postMessage({ startPort:start, endPort:end, portsAlongRoute }, '*');
 }
 </script>
 </body>
