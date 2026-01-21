@@ -7,7 +7,8 @@
 body { 
   margin:0; 
   font-family: system-ui, sans-serif; 
-  background:#f5f5f5; 
+  background:#121212; 
+  color:#eee;
 }
 
 iframe { 
@@ -21,27 +22,36 @@ iframe {
   padding: 20px;
   max-width: 800px;
   margin: 20px auto;
-  background: #fff;
+  background:#1e1e1e;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.7);
 }
 
-.order-section h2 { margin-top:0; }
+.order-section h2 { 
+  margin-top:0; 
+  color:#00bcd4;
+}
 
-.order-section form label { display:block; margin-bottom: 10px; }
+.order-section form label { 
+  display:block; 
+  margin-bottom: 10px; 
+}
 
 .order-section form input, 
-.order-section form select {
+.order-section form select, 
+.order-section form textarea {
   width: 90%;
   padding: 6px 10px;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid #555;
+  background:#2b2b2b;
+  color:#eee;
 }
 
 .order-section form small {
   display:block;
-  font-size: 0.9em;
-  color:#555;
+  font-size: 0.85em;
+  color:#aaa;
   margin-bottom:10px;
 }
 
@@ -56,7 +66,29 @@ iframe {
   cursor:pointer;
 }
 
-.order-section form button:hover { background:#0098aa; }
+.order-section form button:hover { 
+  background:#0098aa; 
+}
+
+.container-info {
+  margin-top:20px;
+  background:#2b2b2b;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #555;
+}
+
+.container-info img {
+  max-width:100%;
+  display:block;
+  margin:10px 0;
+  border-radius:6px;
+}
+
+.container-info ul {
+  margin:0;
+  padding-left:20px;
+}
 </style>
 </head>
 <body>
@@ -93,7 +125,6 @@ iframe {
       </select>
     </label>
 
-    <!-- Hidden field for nation if Military -->
     <div id="militaryNationContainer" style="display:none; margin-bottom:10px;">
       <label>Nation:
         <input type="text" id="militaryNation" placeholder="Enter your nation">
@@ -105,19 +136,36 @@ iframe {
     </label>
     <small>Must be 3 capital letters followed by 4 digits (e.g., UAE 1234)</small>
 
+    <label>Optional Comment:
+      <textarea id="orderComment" rows="3" placeholder="Add a comment (optional)"></textarea>
+    </label>
+
     <label>Total Price ($):
       <input type="text" id="totalPrice" readonly>
     </label>
 
     <button type="submit" id="submitBtn">Submit Order</button>
   </form>
+
+  <div class="container-info">
+    <h3>Container Requirements</h3>
+    <p>Containers must follow these rules:</p>
+    <ul>
+      <li>Dimensions: 10 blocks long, 3 blocks wide, 5 blocks high</li>
+      <li>Max 9 barrels or chests inside</li>
+      <li>Must contain an iron door with a lever inside to seal the container</li>
+      <li>A sign with the container number must be placed inside</li>
+    </ul>
+    <img src="/mnt/data/cd0a5ad6-4455-431d-925a-39826f16dbf8.png" alt="Container Example 1">
+    <img src="/mnt/data/6877b029-e017-49bf-aa81-0be269b7a1d1.png" alt="Container Example 2">
+    <img src="/mnt/data/3e88a5dc-5e2c-4157-af89-b859171ddbb0.png" alt="Container Example 3">
+  </div>
 </div>
 
 <script>
 const perStopFee = 1000;
 let routePortNames = [];
 
-// Show/hide military nation field
 const containerTypeSelect = document.getElementById('containerType');
 const militaryNationContainer = document.getElementById('militaryNationContainer');
 
@@ -125,7 +173,6 @@ containerTypeSelect.addEventListener('change', () => {
   militaryNationContainer.style.display = containerTypeSelect.value === "Military" ? "block" : "none";
 });
 
-// Listen for messages from the map iframe
 window.addEventListener('message', (event) => {
   const data = event.data;
   if(data && data.startPort && data.endPort && Array.isArray(data.portsAlongRoute)){
@@ -145,7 +192,6 @@ function calculatePrice(){
 
 document.getElementById('cargoValue').addEventListener('input', calculatePrice);
 
-// Handle form submission
 document.getElementById('orderForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
 
@@ -180,10 +226,10 @@ document.getElementById('orderForm').addEventListener('submit', async (e)=>{
     containerNumber: containerNumber,
     totalPrice: parseFloat(document.getElementById('totalPrice').value),
     portsAlongRoute: routePortNames,
-    nation: containerTypeSelect.value === "Military" ? document.getElementById('militaryNation').value : null
+    nation: containerTypeSelect.value === "Military" ? document.getElementById('militaryNation').value : null,
+    comment: document.getElementById('orderComment').value || null
   };
 
-  // Replace with your actual Discord webhook URL
   const webhookURL = "https://discord.com/api/webhooks/1463234591706976543/1wTw6W8jXRmiOMTNjzbilt4AJxPGVmC4FTbPt3OQGvN3TRgRuAbQN75V0Q7jlOTToT4o";
 
   let content = `📦 **New Shipping Order**
@@ -195,6 +241,7 @@ document.getElementById('orderForm').addEventListener('submit', async (e)=>{
 **Container:** ${orderData.containerType} (#${orderData.containerNumber})`;
 
   if(orderData.nation) content += `\n**Nation:** ${orderData.nation}`;
+  if(orderData.comment) content += `\n**Comment:** ${orderData.comment}`;
 
   content += `\n**Stops:** ${orderData.portsAlongRoute.join(' → ')}
 **Total Price:** $${orderData.totalPrice.toFixed(2)}`;
