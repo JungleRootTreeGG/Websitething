@@ -3,118 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <title>Baltic Shipping Order SMC</title>
-
 <style>
-/* ===== BASE ===== */
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   background: #121212;
   color: #e6e6e6;
 }
-
-/* ===== MAP ===== */
-iframe {
-  width: 100%;
-  height: 500px;
-  border: none;
-  display: block;
-  background: #000;
-}
-
-/* ===== MAIN CARD ===== */
-.order-section {
-  max-width: 900px;
-  margin: 24px auto;
-  padding: 24px;
-  background: #1b1b1b;
-  border-radius: 14px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
-}
-
-.order-section h2 {
-  margin-top: 0;
-  margin-bottom: 16px;
-  color: #00bcd4;
-  font-weight: 600;
-}
-
-/* ===== FORM ===== */
-form label {
-  display: block;
-  margin-bottom: 12px;
-}
-
-form input,
-form select,
-form textarea {
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #444;
-  background: #262626;
-  color: #eee;
-  box-sizing: border-box;
-}
-
-form textarea {
-  resize: vertical;
-}
-
-form small {
-  display: block;
-  margin-bottom: 12px;
-  font-size: 0.85em;
-  color: #aaa;
-}
-
-form button {
-  margin-top: 18px;
-  padding: 12px 22px;
-  border: none;
-  border-radius: 8px;
-  background: #00bcd4;
-  color: #000;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-form button:hover {
-  background: #0098aa;
-}
-
-/* ===== CONTAINER INFO ===== */
-.container-info {
-  margin-top: 28px;
-  padding: 16px;
-  background: #242424;
-  border-radius: 10px;
-  border: 1px solid #3a3a3a;
-}
-
-.container-info h3 {
-  margin-top: 0;
-  color: #00bcd4;
-}
-
-.container-info ul {
-  margin: 0;
-  padding-left: 18px;
-}
-
-.container-info img {
-  max-width: 100%;
-  margin-top: 12px;
-  border-radius: 8px;
-  border: 1px solid #333;
-}
+iframe { width: 100%; height: 500px; border: none; display: block; background: #000; }
+.order-section { max-width: 900px; margin: 24px auto; padding: 24px; background: #1b1b1b; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
+.order-section h2 { margin-top: 0; margin-bottom: 16px; color: #00bcd4; font-weight: 600; }
+form label { display: block; margin-bottom: 12px; }
+form input, form select, form textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #444; background: #262626; color: #eee; box-sizing: border-box; }
+form textarea { resize: vertical; }
+form small { display: block; margin-bottom: 12px; font-size: 0.85em; color: #aaa; }
+form button { margin-top: 18px; padding: 12px 22px; border: none; border-radius: 8px; background: #00bcd4; color: #000; font-size: 16px; font-weight: 600; cursor: pointer; }
+form button:hover { background: #0098aa; }
+.container-info { margin-top: 28px; padding: 16px; background: #242424; border-radius: 10px; border: 1px solid #3a3a3a; }
+.container-info h3 { margin-top: 0; color: #00bcd4; }
+.container-info ul { margin: 0; padding-left: 18px; }
+.container-info img { max-width: 100%; margin-top: 12px; border-radius: 8px; border: 1px solid #333; }
 </style>
 </head>
-
 <body>
 
-<!-- MAP -->
 <iframe src="map.html" id="mapFrame"></iframe>
 
 <div class="order-section">
@@ -156,10 +68,7 @@ form button:hover {
     </div>
 
     <label>Container Number:
-      <input type="text" id="containerNumber"
-             placeholder="NBO 1234"
-             required
-             pattern="[A-Z]{3} \d{4}">
+      <input type="text" id="containerNumber" placeholder="NBO 1234" required pattern="[A-Z]{3} \d{4}">
     </label>
     <small>Format: 3 capital letters + space + 4 digits</small>
 
@@ -171,7 +80,7 @@ form button:hover {
       <input type="text" id="totalPrice" readonly>
     </label>
     <small>Pay at the port</small>
-    
+
     <button type="submit" id="submitBtn">Submit Order</button>
   </form>
 
@@ -183,7 +92,6 @@ form button:hover {
       <li>Iron door with lever inside for sealing</li>
       <li>Sign inside with container number, origin and destination</li>
     </ul>
-
     <img src="https://i.postimg.cc/D0fp4QVg/3e88a5dc-5e2c-4157-af89-b859171ddbb0.png">
     <img src="https://i.postimg.cc/rwRn4Fbp/6877b029-e017-49bf-aa81-0be269b7a1d1.png">
     <img src="https://i.postimg.cc/5N6nc2fN/cd0a5ad6-4455-431d-925a-39826f16dbf8.png">
@@ -191,90 +99,78 @@ form button:hover {
 </div>
 
 <script>
-/* ===== ROUTE PRICES (EDIT HERE) ===== */
 const routePrices = {
   "Konigsberg|London": 3500,
   "London|Miami": 5000,
   "Konigsberg|Miami": 8000
 };
 
-let routePortNames = [];
-
-const containerTypeSelect = document.getElementById('containerType');
-const militaryNationContainer = document.getElementById('militaryNationContainer');
-
-containerTypeSelect.addEventListener('change', () => {
-  militaryNationContainer.style.display =
-    containerTypeSelect.value === "Military" ? "block" : "none";
-  calculatePrice();
-});
-
-/* ===== MAP MESSAGE ===== */
-window.addEventListener('message', (event) => {
-  const d = event.data;
-  if (d && d.startPort && d.endPort && Array.isArray(d.portsAlongRoute)) {
-    routePortNames = d.portsAlongRoute;
-    fromPort.value = d.startPort;
-    toPort.value = d.endPort;
-    calculatePrice();
-  }
-});
-
-const cargoValueInput = document.getElementById('cargoValue');
 const fromPort = document.getElementById('fromPort');
 const toPort = document.getElementById('toPort');
 const totalPrice = document.getElementById('totalPrice');
+const cargoValueInput = document.getElementById('cargoValue');
+const containerTypeSelect = document.getElementById('containerType');
+const militaryNationContainer = document.getElementById('militaryNationContainer');
+const militaryNationInput = document.getElementById('militaryNation');
+
+containerTypeSelect.addEventListener('change', updateMilitaryField);
+
+function updateMilitaryField() {
+  if (containerTypeSelect.value === "Military") {
+    militaryNationContainer.style.display = "block";
+    militaryNationInput.setAttribute("required", "required");
+  } else {
+    militaryNationContainer.style.display = "none";
+    militaryNationInput.removeAttribute("required");
+  }
+  calculatePrice();
+}
+
+// Initialize
+updateMilitaryField();
+
+window.addEventListener('message', (event) => {
+  const d = event.data;
+  if (d && d.startPort && d.endPort) {
+    fromPort.value = d.startPort;
+    toPort.value = d.endPort;
+    calculatePrice();
+    updateMilitaryField();
+  }
+});
 
 cargoValueInput.addEventListener('input', calculatePrice);
 
-/* ===== PRICE CALC ===== */
 function calculatePrice() {
-  const cargoValue = parseFloat(document.getElementById('cargoValue').value) || 0;
+  const cargoValue = parseFloat(cargoValueInput.value) || 0;
   const from = fromPort.value;
   const to = toPort.value;
+  if (!from || !to) { totalPrice.value = ""; return; }
 
-  if (!from || !to) {
-    totalPrice.value = "";
-    return;
-  }
-
-  // Normalize route key (directionless)
   const routeKey = [from, to].sort().join("|");
+  const baseCost = routePrices[routeKey];
+  if (baseCost === undefined) { totalPrice.value = "N/A"; return; }
 
-  const routeCost = routePrices[routeKey];
-
-  if (routeCost === undefined) {
-    totalPrice.value = "N/A";
-    return;
-  }
-
-  const total = routeCost + cargoValue * 0.10;
+  const total = (containerTypeSelect.value === "Military" ? baseCost * 2 : baseCost) + cargoValue * 0.10;
   totalPrice.value = total.toFixed(2);
 }
 
-/* ===== SUBMIT FORM & DISCORD WEBHOOK ===== */
+/* ===== SUBMIT & DISCORD WEBHOOK ===== */
 document.getElementById('orderForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-
   const submitBtn = document.getElementById('submitBtn');
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Sending...";
+  submitBtn.disabled = true; submitBtn.textContent = "Sending...";
 
-  // Validate route
-  if (!routePortNames.length) {
+  if (!fromPort.value || !toPort.value) {
     alert("Please select a route on the map first.");
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Submit Order";
+    submitBtn.disabled = false; submitBtn.textContent = "Submit Order";
     return;
   }
 
-  // Validate container number
   const containerNumber = document.getElementById('containerNumber').value.trim();
-  const regex = /^[A-Z]{3} \d{4}$/;
-  if (!regex.test(containerNumber)) {
-    alert("Container number is invalid! Format: 3 capital letters + space + 4 digits (e.g., NBO 1234).");
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Submit Order";
+  if (!/^[A-Z]{3} \d{4}$/.test(containerNumber)) {
+    alert("Container number invalid! Format: 3 capital letters + space + 4 digits.");
+    submitBtn.disabled = false; submitBtn.textContent = "Submit Order";
     return;
   }
 
@@ -287,11 +183,10 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
     containerType: containerTypeSelect.value,
     containerNumber,
     totalPrice: parseFloat(totalPrice.value),
-    nation: containerTypeSelect.value === "Military" ? document.getElementById('militaryNation').value : null,
+    nation: containerTypeSelect.value === "Military" ? militaryNationInput.value : null,
     comment: document.getElementById('orderComment').value || null
   };
 
-  // Discord webhook URL
   const webhookURL = "https://discord.com/api/webhooks/1463234591706976543/1wTw6W8jXRmiOMTNjzbilt4AJxPGVmC4FTbPt3OQGvN3TRgRuAbQN75V0Q7jlOTToT4o";
 
   let content = `📦 **New Shipping Order**
@@ -304,8 +199,7 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
 
   if (orderData.nation) content += `\n**Nation:** ${orderData.nation}`;
   if (orderData.comment) content += `\n**Comment:** ${orderData.comment}`;
-
-**Total Price:** $${orderData.totalPrice.toFixed(2)}`;
+  content += `\n**Total Price:** $${orderData.totalPrice.toFixed(2)}`;
 
   try {
     const response = await fetch(webhookURL, {
@@ -316,17 +210,29 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
 
     if (response.ok) {
       alert("Order sent successfully!");
-      document.getElementById('orderForm').reset();
+      // Reset only the user-input fields
+      document.getElementById('discord').value = "";
+      document.getElementById('ingame').value = "";
+      cargoValueInput.value = "0";
+      document.getElementById('containerNumber').value = "";
+      if (containerTypeSelect.value === "Military") militaryNationInput.value = "";
+      document.getElementById('orderComment').value = "";
       totalPrice.value = "";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Order";
+      document.getElementById('discord').focus();
     } else {
       alert("Failed to send order to Discord.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Order";
     }
   } catch (err) {
     console.error(err);
     alert("Network error. Could not send order.");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Order";
   }
-
-  submitBtn.disabled = false;
-  submitBtn.textContent = "Submit Order";
 });
 </script>
+</body>
+</html>
