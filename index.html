@@ -251,18 +251,83 @@ function calculatePrice() {
   totalPrice.value = total.toFixed(2);
 }
 
-/* ===== SUBMIT ===== */
+/* ===== SUBMIT FORM & DISCORD WEBHOOK ===== */
 document.getElementById('orderForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Sending...";
+
+  // Validate route
   if (!routePortNames.length) {
     alert("Please select a route on the map first.");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Order";
     return;
   }
 
-  alert("Order submitted successfully.");
+  // Validate container number
+  const containerNumber = document.getElementById('containerNumber').value.trim();
+  const regex = /^[A-Z]{3} \d{4}$/;
+  if (!regex.test(containerNumber)) {
+    alert("Container number is invalid! Format: 3 capital letters + space + 4 digits (e.g., NBO 1234).");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Order";
+    return;
+  }
+
+  const orderData = {
+    fromPort: fromPort.value,
+    toPort: toPort.value,
+    discord: document.getElementById('discord').value,
+    ingame: document.getElementById('ingame').value,
+    cargoValue: parseFloat(cargoValueInput.value),
+    containerType: containerTypeSelect.value,
+    containerNumber,
+    totalPrice: parseFloat(totalPrice.value),
+    portsAlongRoute: routePortNames,
+    nation: containerTypeSelect.value === "Military" ? document.getElementById('militaryNation').value : null,
+    comment: document.getElementById('orderComment').value || null
+  };
+
+  // Discord webhook URL
+  const webhookURL = "https://discord.com/api/webhooks/1463234591706976543/1wTw6W8jXRmiOMTNjzbilt4AJxPGVmC4FTbPt3OQGvN3TRgRuAbQN75V0Q7jlOTToT4o";
+
+  let content = `📦 **New Shipping Order**
+**From:** ${orderData.fromPort}
+**To:** ${orderData.toPort}
+**Discord:** ${orderData.discord}
+**In-game Username:** ${orderData.ingame}
+**Cargo Value:** $${orderData.cargoValue.toFixed(2)}
+**Container:** ${orderData.containerType} (#${orderData.containerNumber})`;
+
+  if (orderData.nation) content += `\n**Nation:** ${orderData.nation}`;
+  if (orderData.comment) content += `\n**Comment:** ${orderData.comment}`;
+
+  content += `\n**Stops:** ${orderData.portsAlongRoute.join(' → ')}
+**Total Price:** $${orderData.totalPrice.toFixed(2)}`;
+
+  try {
+    const response = await fetch(webhookURL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    });
+
+    if (response.ok) {
+      alert("Order sent successfully!");
+      document.getElementById('orderForm').reset();
+      totalPrice.value = "";
+    } else {
+      alert("Failed to send order to Discord.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Network error. Could not send order.");
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = "Submit Order";
 });
 </script>
-
-</body>
-</html>
