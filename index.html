@@ -228,10 +228,27 @@ cargoValueInput.addEventListener('input', calculatePrice);
 
 /* ===== PRICE CALC ===== */
 function calculatePrice() {
-  const cargoValue = Number(cargoValueInput.value) || 0;
-  const routeKey = `${fromPort.value}→${toPort.value}`;
-  const routeCost = routePrices[routeKey] || 0;
-  totalPrice.value = (routeCost + cargoValue * 0.10).toFixed(2);
+  const cargoValue = parseFloat(document.getElementById('cargoValue').value) || 0;
+  const from = fromPort.value;
+  const to = toPort.value;
+
+  if (!from || !to) {
+    totalPrice.value = "";
+    return;
+  }
+
+  // Normalize route key (directionless)
+  const routeKey = [from, to].sort().join("|");
+
+  const routeCost = routePrices[routeKey];
+
+  if (routeCost === undefined) {
+    totalPrice.value = "N/A";
+    return;
+  }
+
+  const total = routeCost + cargoValue * 0.10;
+  totalPrice.value = total.toFixed(2);
 }
 
 /* ===== SUBMIT ===== */
