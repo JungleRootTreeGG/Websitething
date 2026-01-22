@@ -5,279 +5,244 @@
 <title>SMC Shipping Ordering System</title>
 
 <style>
-:root {
-  --accent: #00bcd4;
-  --bg-dark: #0f1115;
-  --card-bg: rgba(30,30,30,0.85);
-  --border: rgba(255,255,255,0.08);
-}
-
-* { box-sizing: border-box; }
-
+/* ===== GLOBAL ===== */
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: linear-gradient(
-      rgba(15,17,21,0.9),
-      rgba(15,17,21,0.9)
-    ),
-    url("https://i.postimg.cc/9FWd8zvM/minecraft-ship-bg.jpg");
-  background-size: cover;
-  background-attachment: fixed;
-  color: #e6e6e6;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(180deg, #0f1720, #121212);
+  color: #eaeaea;
 }
 
-/* ---------- HEADER ---------- */
-.header {
-  padding: 60px 20px 40px;
-  text-align: center;
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 2.6rem;
-  letter-spacing: 1px;
-}
-
-.header p {
-  margin-top: 10px;
-  color: #aaa;
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* ---------- MAP ---------- */
+/* ===== MAP ===== */
 iframe {
   width: 100%;
   height: 500px;
   border: none;
   display: block;
+  background: #000;
 }
 
-/* ---------- LAYOUT ---------- */
-.wrapper {
-  max-width: 1100px;
-  margin: 30px auto;
-  padding: 0 20px 40px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 30px;
-}
-
-/* ---------- CARD ---------- */
-.card {
-  background: var(--card-bg);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+/* ===== ORDER CARD ===== */
+.order-section {
+  max-width: 900px;
+  margin: 24px auto;
   padding: 24px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  background: #1b1f26;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
 }
 
-.card h2 {
+.order-section h2 {
   margin-top: 0;
-  color: var(--accent);
+  color: #00c8e0;
 }
 
-/* ---------- FORM ---------- */
-label {
+/* ===== FORM ===== */
+form label {
   display: block;
-  margin-bottom: 14px;
-  font-size: 0.95rem;
+  margin-bottom: 12px;
 }
 
-input, select, textarea {
-  width: 100%;
+form input,
+form select,
+form textarea {
+  width: 95%;
   padding: 8px 12px;
-  margin-top: 6px;
   border-radius: 8px;
-  border: 1px solid #444;
-  background: #1c1f26;
-  color: #eee;
+  border: 1px solid #3a3f46;
+  background: #262b33;
+  color: #fff;
 }
 
-input[readonly] {
-  opacity: 0.7;
-}
-
-small {
-  display: block;
-  margin-top: 4px;
-  color: #999;
-  font-size: 0.85em;
-}
-
-textarea {
+form textarea {
   resize: vertical;
 }
 
-button {
-  margin-top: 20px;
-  width: 100%;
-  padding: 12px;
+form small {
+  display: block;
+  font-size: 0.85em;
+  color: #a0a7b0;
+  margin-bottom: 12px;
+}
+
+form button {
+  margin-top: 16px;
+  padding: 12px 24px;
   border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #00bcd4, #008ea1);
-  color: #fff;
-  font-size: 1rem;
+  border-radius: 8px;
+  background: #00c8e0;
+  color: #000;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
 }
 
-button:hover { opacity: 0.9; }
-button:disabled { opacity: 0.6; cursor: not-allowed; }
+form button:hover {
+  background: #00a6bb;
+}
 
-/* ---------- CONTAINER INFO ---------- */
+/* ===== CONTAINER INFO ===== */
+.container-info {
+  margin-top: 28px;
+  padding: 18px;
+  background: #222833;
+  border-radius: 10px;
+  border: 1px solid #343b46;
+}
+
+.container-info h3 {
+  margin-top: 0;
+  color: #00c8e0;
+}
+
 .container-info ul {
   padding-left: 20px;
 }
 
 .container-info img {
-  width: 100%;
+  max-width: 100%;
   margin-top: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
-
-/* ---------- FOOTER ---------- */
-.footer {
-  text-align: center;
-  color: #777;
-  font-size: 0.85rem;
-  padding-bottom: 30px;
+  border-radius: 8px;
+  border: 1px solid #333;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-  <h1>SMC Global Shipping</h1>
-  <p>Professional maritime logistics across the Minecraft Earth.  
-     Select a route, prepare your container, and submit your order for approval.</p>
-</div>
+<!-- MAP -->
+<iframe src="map.html" id="mapFrame" loading="eager"></iframe>
 
-<iframe src="map.html"></iframe>
+<!-- ORDER FORM -->
+<div class="order-section">
+  <h2>Place Your Shipping Order</h2>
 
-<div class="wrapper">
+  <form id="orderForm">
 
-  <!-- ORDER FORM -->
-  <div class="card">
-    <h2>Shipping Order</h2>
+    <label>From Port:
+      <input type="text" id="fromPort" readonly required>
+    </label>
 
-    <form id="orderForm">
-      <label>From Port
-        <input type="text" id="fromPort" readonly required>
+    <label>To Port:
+      <input type="text" id="toPort" readonly required>
+    </label>
+
+    <label>Discord Username:
+      <input type="text" id="discord" required>
+    </label>
+
+    <label>In-game Username:
+      <input type="text" id="ingame" required>
+    </label>
+
+    <label>Cargo Value ($):
+      <input type="number" id="cargoValue" min="0" value="0" required>
+    </label>
+
+    <label>Container Type:
+      <select id="containerType" required>
+        <option value="Civilian">Civilian</option>
+        <option value="Military">Military</option>
+      </select>
+    </label>
+
+    <div id="militaryNationContainer" style="display:none;">
+      <label>Nation:
+        <input type="text" id="militaryNation">
       </label>
+    </div>
 
-      <label>To Port
-        <input type="text" id="toPort" readonly required>
-      </label>
+    <label>Container Number:
+      <input type="text" id="containerNumber" placeholder="NBO 1234"
+             required pattern="[A-Z]{3} \d{4}">
+    </label>
+    <small>Format: 3 capital letters + space + 4 digits (e.g. NBO 1234)</small>
 
-      <label>Discord Username
-        <input type="text" id="discord" required>
-      </label>
+    <label>Optional Comment:
+      <textarea id="orderComment" rows="3"
+                placeholder="Anything we should know?"></textarea>
+    </label>
 
-      <label>In-game Username
-        <input type="text" id="ingame" required>
-      </label>
+    <label>Total Price ($):
+      <input type="text" id="totalPrice" readonly>
+    </label>
 
-      <label>Cargo Value ($)
-        <input type="number" id="cargoValue" min="200" value="0" required>
-        <small>10% of cargo value is added to the route price</small>
-      </label>
-
-      <label>Container Type
-        <select id="containerType" required>
-          <option value="Civilian">Civilian</option>
-          <option value="Military">Military</option>
-        </select>
-      </label>
-
-      <div id="militaryNationContainer" style="display:none;">
-        <label>Nation
-          <input type="text" id="militaryNation">
-        </label>
-      </div>
-
-      <label>Container Number
-        <input type="text" id="containerNumber" placeholder="NBO 1234" required pattern="[A-Z]{3} \d{4}">
-        <small>3 capital letters + 4 digits</small>
-      </label>
-
-      <label>Optional Comment
-        <textarea id="orderComment" rows="3"></textarea>
-      </label>
-
-      <label>Total Price ($)
-        <input type="text" id="totalPrice" readonly>
-      </label>
-
-      <button type="submit" id="submitBtn">Submit Order</button>
-    </form>
-  </div>
+    <button type="submit" id="submitBtn">Submit Order</button>
+  </form>
 
   <!-- CONTAINER RULES -->
-  <div class="card container-info">
-    <h2>Container Requirements</h2>
+  <div class="container-info">
+    <h3>Container Requirements</h3>
     <ul>
-      <li>Dimensions: <strong>10×3×5 blocks</strong></li>
-      <li>Maximum of <strong>9 barrels or chests</strong></li>
-      <li>Must include an <strong>iron door with an internal lever</strong></li>
-      <li>A sign inside must show <strong>container number, origin, destination</strong></li>
+      <li>10 blocks long × 3 blocks wide × 5 blocks high</li>
+      <li>Maximum 9 barrels or chests inside</li>
+      <li>Iron door with lever inside (sealed for transport)</li>
+      <li>Sign inside showing container number, origin & destination</li>
     </ul>
 
-    <img src="https://i.postimg.cc/D0fp4QVg/3e88a5dc-5e2c-4157-af89-b859171ddbb0.png">
-    <img src="https://i.postimg.cc/rwRn4Fbp/6877b029-e017-49bf-aa81-0be269b7a1d1.png">
-    <img src="https://i.postimg.cc/5N6nc2fN/cd0a5ad6-4455-431d-925a-39826f16dbf8.png">
+    <img src="https://i.postimg.cc/D0fp4QVg/3e88a5dc-5e2c-4157-af89-b859171ddbb0.png" loading="lazy">
+    <img src="https://i.postimg.cc/rwRn4Fbp/6877b029-e017-49bf-aa81-0be269b7a1d1.png" loading="lazy">
+    <img src="https://i.postimg.cc/5N6nc2fN/cd0a5ad6-4455-431d-925a-39826f16dbf8.png" loading="lazy">
   </div>
-
-</div>
-
-<div class="footer">
-  © SMC Shipping • Minecraft Earth Logistics Division
 </div>
 
 <script>
-/* ---------------- ROUTE PRICING ---------------- */
+/* ===== ROUTE PRICING (EDIT HERE) ===== */
 const routePrices = {
   "Miami→London": 5000,
-  "Miami→Konigsberg": 7000,
-  "London→Konigsberg": 3000
+  "Miami→Konigsberg": 8000,
+  "London→Konigsberg": 3500
 };
 
 let routePortNames = [];
-let selectedRouteKey = null;
 
+/* ===== MILITARY TOGGLE ===== */
 const containerTypeSelect = document.getElementById('containerType');
 const militaryNationContainer = document.getElementById('militaryNationContainer');
 
 containerTypeSelect.addEventListener('change', () => {
   militaryNationContainer.style.display =
     containerTypeSelect.value === "Military" ? "block" : "none";
+  calculatePrice();
 });
 
-/* -------- RECEIVE ROUTE FROM MAP -------- */
+/* ===== MAP MESSAGE ===== */
 window.addEventListener('message', (event) => {
   const d = event.data;
-  if(d?.startPort && d?.endPort){
-    document.getElementById('fromPort').value = d.startPort;
-    document.getElementById('toPort').value = d.endPort;
-    routePortNames = d.portsAlongRoute || [];
-    selectedRouteKey = `${d.startPort}→${d.endPort}`;
+  if (d?.startPort && d?.endPort && Array.isArray(d.portsAlongRoute)) {
+    routePortNames = d.portsAlongRoute;
+    fromPort.value = d.startPort;
+    toPort.value = d.endPort;
     calculatePrice();
   }
 });
 
-function calculatePrice(){
-  const cargoValue = Number(document.getElementById('cargoValue').value) || 0;
-  const routePrice = routePrices[selectedRouteKey] || 0;
-  const total = routePrice + cargoValue * 0.10;
-  document.getElementById('totalPrice').value = total.toFixed(2);
+/* ===== PRICE CALC ===== */
+function calculatePrice() {
+  const cargoValue = Number(cargoValueInput.value) || 0;
+  const routeKey = `${fromPort.value}→${toPort.value}`;
+  const routeCost = routePrices[routeKey] || 0;
+  totalPrice.value = (routeCost + cargoValue * 0.10).toFixed(2);
 }
 
-document.getElementById('cargoValue').addEventListener('input', calculatePrice);
+const cargoValueInput = document.getElementById('cargoValue');
+const fromPort = document.getElementById('fromPort');
+const toPort = document.getElementById('toPort');
+const totalPrice = document.getElementById('totalPrice');
+
+cargoValueInput.addEventListener('input', calculatePrice);
+
+/* ===== SUBMIT ===== */
+document.getElementById('orderForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  if (!routePortNames.length) {
+    alert("Select a route on the map first.");
+    return;
+  }
+
+  alert("Order submitted successfully.");
+});
 </script>
 
 </body>
