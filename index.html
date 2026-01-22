@@ -287,7 +287,6 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
     containerType: containerTypeSelect.value,
     containerNumber,
     totalPrice: parseFloat(totalPrice.value),
-    portsAlongRoute: routePortNames,
     nation: containerTypeSelect.value === "Military" ? document.getElementById('militaryNation').value : null,
     comment: document.getElementById('orderComment').value || null
   };
