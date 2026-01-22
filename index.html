@@ -210,14 +210,13 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
 
     if (response.ok) {
       alert("Order sent successfully!");
-      // Reset only the user-input fields
+      // Reset only user-input fields
       document.getElementById('discord').value = "";
       document.getElementById('ingame').value = "";
       cargoValueInput.value = "0";
       document.getElementById('containerNumber').value = "";
       if (containerTypeSelect.value === "Military") militaryNationInput.value = "";
       document.getElementById('orderComment').value = "";
-      totalPrice.value = "";
       submitBtn.disabled = false;
       submitBtn.textContent = "Submit Order";
       document.getElementById('discord').focus();
