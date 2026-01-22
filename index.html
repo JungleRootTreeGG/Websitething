@@ -5,12 +5,12 @@
 <title>SMC Shipping Ordering System</title>
 
 <style>
-/* ===== GLOBAL ===== */
+/* ===== BASE ===== */
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(180deg, #0f1720, #121212);
-  color: #eaeaea;
+  background: #121212;
+  color: #e6e6e6;
 }
 
 /* ===== MAP ===== */
@@ -22,19 +22,21 @@ iframe {
   background: #000;
 }
 
-/* ===== ORDER CARD ===== */
+/* ===== MAIN CARD ===== */
 .order-section {
   max-width: 900px;
   margin: 24px auto;
   padding: 24px;
-  background: #1b1f26;
+  background: #1b1b1b;
   border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
 }
 
 .order-section h2 {
   margin-top: 0;
-  color: #00c8e0;
+  margin-bottom: 16px;
+  color: #00bcd4;
+  font-weight: 600;
 }
 
 /* ===== FORM ===== */
@@ -46,12 +48,13 @@ form label {
 form input,
 form select,
 form textarea {
-  width: 95%;
-  padding: 8px 12px;
+  width: 100%;
+  padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #3a3f46;
-  background: #262b33;
-  color: #fff;
+  border: 1px solid #444;
+  background: #262626;
+  color: #eee;
+  box-sizing: border-box;
 }
 
 form textarea {
@@ -60,17 +63,17 @@ form textarea {
 
 form small {
   display: block;
-  font-size: 0.85em;
-  color: #a0a7b0;
   margin-bottom: 12px;
+  font-size: 0.85em;
+  color: #aaa;
 }
 
 form button {
-  margin-top: 16px;
-  padding: 12px 24px;
+  margin-top: 18px;
+  padding: 12px 22px;
   border: none;
   border-radius: 8px;
-  background: #00c8e0;
+  background: #00bcd4;
   color: #000;
   font-size: 16px;
   font-weight: 600;
@@ -78,25 +81,26 @@ form button {
 }
 
 form button:hover {
-  background: #00a6bb;
+  background: #0098aa;
 }
 
 /* ===== CONTAINER INFO ===== */
 .container-info {
   margin-top: 28px;
-  padding: 18px;
-  background: #222833;
+  padding: 16px;
+  background: #242424;
   border-radius: 10px;
-  border: 1px solid #343b46;
+  border: 1px solid #3a3a3a;
 }
 
 .container-info h3 {
   margin-top: 0;
-  color: #00c8e0;
+  color: #00bcd4;
 }
 
 .container-info ul {
-  padding-left: 20px;
+  margin: 0;
+  padding-left: 18px;
 }
 
 .container-info img {
@@ -111,9 +115,8 @@ form button:hover {
 <body>
 
 <!-- MAP -->
-<iframe src="map.html" id="mapFrame" loading="eager"></iframe>
+<iframe src="map.html" id="mapFrame"></iframe>
 
-<!-- ORDER FORM -->
 <div class="order-section">
   <h2>Place Your Shipping Order</h2>
 
@@ -153,14 +156,15 @@ form button:hover {
     </div>
 
     <label>Container Number:
-      <input type="text" id="containerNumber" placeholder="NBO 1234"
-             required pattern="[A-Z]{3} \d{4}">
+      <input type="text" id="containerNumber"
+             placeholder="NBO 1234"
+             required
+             pattern="[A-Z]{3} \d{4}">
     </label>
-    <small>Format: 3 capital letters + space + 4 digits (e.g. NBO 1234)</small>
+    <small>Format: 3 capital letters + space + 4 digits</small>
 
     <label>Optional Comment:
-      <textarea id="orderComment" rows="3"
-                placeholder="Anything we should know?"></textarea>
+      <textarea id="orderComment" rows="3"></textarea>
     </label>
 
     <label>Total Price ($):
@@ -170,24 +174,23 @@ form button:hover {
     <button type="submit" id="submitBtn">Submit Order</button>
   </form>
 
-  <!-- CONTAINER RULES -->
   <div class="container-info">
     <h3>Container Requirements</h3>
     <ul>
       <li>10 blocks long × 3 blocks wide × 5 blocks high</li>
-      <li>Maximum 9 barrels or chests inside</li>
-      <li>Iron door with lever inside (sealed for transport)</li>
-      <li>Sign inside showing container number, origin & destination</li>
+      <li>Maximum 9 barrels or chests</li>
+      <li>Iron door with lever inside for sealing</li>
+      <li>Sign inside with container number, origin and destination</li>
     </ul>
 
-    <img src="https://i.postimg.cc/D0fp4QVg/3e88a5dc-5e2c-4157-af89-b859171ddbb0.png" loading="lazy">
-    <img src="https://i.postimg.cc/rwRn4Fbp/6877b029-e017-49bf-aa81-0be269b7a1d1.png" loading="lazy">
-    <img src="https://i.postimg.cc/5N6nc2fN/cd0a5ad6-4455-431d-925a-39826f16dbf8.png" loading="lazy">
+    <img src="https://i.postimg.cc/D0fp4QVg/3e88a5dc-5e2c-4157-af89-b859171ddbb0.png">
+    <img src="https://i.postimg.cc/rwRn4Fbp/6877b029-e017-49bf-aa81-0be269b7a1d1.png">
+    <img src="https://i.postimg.cc/5N6nc2fN/cd0a5ad6-4455-431d-925a-39826f16dbf8.png">
   </div>
 </div>
 
 <script>
-/* ===== ROUTE PRICING (EDIT HERE) ===== */
+/* ===== ROUTE PRICES (EDIT HERE) ===== */
 const routePrices = {
   "Miami→London": 5000,
   "Miami→Konigsberg": 8000,
@@ -196,7 +199,6 @@ const routePrices = {
 
 let routePortNames = [];
 
-/* ===== MILITARY TOGGLE ===== */
 const containerTypeSelect = document.getElementById('containerType');
 const militaryNationContainer = document.getElementById('militaryNationContainer');
 
@@ -209,13 +211,20 @@ containerTypeSelect.addEventListener('change', () => {
 /* ===== MAP MESSAGE ===== */
 window.addEventListener('message', (event) => {
   const d = event.data;
-  if (d?.startPort && d?.endPort && Array.isArray(d.portsAlongRoute)) {
+  if (d && d.startPort && d.endPort && Array.isArray(d.portsAlongRoute)) {
     routePortNames = d.portsAlongRoute;
     fromPort.value = d.startPort;
     toPort.value = d.endPort;
     calculatePrice();
   }
 });
+
+const cargoValueInput = document.getElementById('cargoValue');
+const fromPort = document.getElementById('fromPort');
+const toPort = document.getElementById('toPort');
+const totalPrice = document.getElementById('totalPrice');
+
+cargoValueInput.addEventListener('input', calculatePrice);
 
 /* ===== PRICE CALC ===== */
 function calculatePrice() {
@@ -225,19 +234,12 @@ function calculatePrice() {
   totalPrice.value = (routeCost + cargoValue * 0.10).toFixed(2);
 }
 
-const cargoValueInput = document.getElementById('cargoValue');
-const fromPort = document.getElementById('fromPort');
-const toPort = document.getElementById('toPort');
-const totalPrice = document.getElementById('totalPrice');
-
-cargoValueInput.addEventListener('input', calculatePrice);
-
 /* ===== SUBMIT ===== */
 document.getElementById('orderForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
   if (!routePortNames.length) {
-    alert("Select a route on the map first.");
+    alert("Please select a route on the map first.");
     return;
   }
 
