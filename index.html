@@ -167,6 +167,11 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
     return;
   }
 
+  if (totalPrice.value === "N/A" || !totalPrice.value) {
+    alert("This route is not priced yet.");
+    return;
+  }
+  
   const containerNumber = document.getElementById('containerNumber').value.trim();
   if (!/^[A-Z]{3} \d{4}$/.test(containerNumber)) {
     alert("Container number invalid! Format: 3 capital letters + space + 4 digits.");
